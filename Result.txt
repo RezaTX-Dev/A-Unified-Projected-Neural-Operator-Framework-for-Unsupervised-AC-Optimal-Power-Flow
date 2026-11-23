@@ -1,0 +1,1351 @@
+FILE: 14(20261123-063456).txt
+====================================================================================================
+
+====================================================================================================
+UNIFIED PROJECTED NEURAL OPERATOR (PNO) AC-OPF STUDY - RESULT TABLES ON PRE-SOLVED DATASETS
+====================================================================================================
+generated : 2026-11-04 10:38:14
+systems   : case14  |  N_DATA=300  seeds=1  max epochs=100  device=cuda
+models    : PNO-FNO, PNO-DeepONet, PNO-GNO, PNO-WNO, Unsup-FNO-Soft, Sup-MLP
+
+Table A (static, from the article). Qualitative comparison of learning-based OPF directions
+Method class                                   Refs                                                  Label-free  Strict feasibility  Global coupling  Backbone-agnostic
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Supervised deep-learning surrogates            Donti2021, Pan2020                                             ×             Partial                ×                  ×
+Unsupervised PINN with soft penalties          Nellikkath2021                                                 ✓                   ×                ×                  ×
+Augmented-Lagrangian training                  article Sec. 2.2                                               ✓             Partial                ×                  ×
+Neural operators (FNO / DeepONet / GNO / WNO)  Li2021FNO, Lu2021DeepONet, Li2020GNO, Tripura2023WNO           ✓                   ×                ✓            Partial
+Proposed Unified PNO framework                 This work                                                      ✓                   ✓                ✓                  ✓
+
+Table 1. Performance comparison of the PNO framework across four neural-operator backbones (out-of-sample test set)
+System  Method                   Labels?  Cost Gap (%)  r_P (p.u.)  Feas (%)  Latency (ms)
+------------------------------------------------------------------------------------------
+[case14]
+case14  IPOPT (pre-solved ref.)       --          0.00    6.49e-07     100.0            --
+case14  Supervised MLP               Yes          0.36    1.54e-02       0.0          0.01
+case14  Unsup. FNO (Soft)             No         50.06    4.59e-02       0.0          0.04
+case14  PNO-FNO (Ours)                No          0.02    3.80e-05      95.6          0.20
+case14  PNO-DeepONet                  No          1.23    6.42e-05       2.2          0.21
+case14  PNO-GNO                       No          0.04    4.67e-04      84.4          0.18
+case14  PNO-WNO                       No          0.03    1.13e-04      93.3          0.22
+note: strict feasibility: max(|r_P|,|r_Q|)<=0.001, box and thermal violations<=0.0001 p.u.
+
+Table 2. Training protocol and PNO configuration
+Item                                 Setting                                                                                                    
+------------------------------------------------------------------------------------------------------------------------------------------------
+Framework                            PyTorch                                                                                                    
+Data                                 pre-solved AC-OPF, PyG OPFDataset (pglib-opf): pglib_opf_case14_ieee                                       
+Labels used for training             none for the PNO models and the soft-penalty FNO (labels only for the supervised MLP and for evaluation)   
+Data split                           train / val / test with test <= 1500 scenarios (random, fixed seed)                                        
+Batch size                           256                                                                                                        
+Optimizer                            Adam                                                                                                       
+Initial LR                           0.001                                                                                                      
+LR schedule                          cosine to 1e-05                                                                                            
+Max epochs                           100                                                                                                        
+Early stopping                       25 epochs without improvement, only after 20% of epochs                                                    
+Min steps / epoch                    20                                                                                                         
+Weight decay                         1e-05                                                                                                      
+Gradient clipping                    max norm 1.0                                                                                               
+Latent width / blocks                64 / 4                                                                                                     
+FNO                                  spectral conv., 12 modes, Fiedler-ordered buses, residual blocks                                           
+DeepONet                             branch 256x2 -> 64 basis functions, trunk 128x2 on 2-D bus coordinates                                     
+GNO                                  3 kernel message-passing layers, edge features (Re/Im admittance, adjacency, hop distance), kernel width 32
+WNO                                  Haar DWT, 2 levels, per-coefficient channel mixing                                                         
+Bound-preserving output              lo + sigmoid(.)(hi-lo) for Pg, Qg, |V| (output bias initialised at a label-free proportional dispatch)     
+Projection layer                     K=3 unrolled weighted pseudo-inverse Newton steps (damping 1e-06); training and inference                  
+PNO loss weights                     cost=1.0, balance=10.0, thermal=1.0                                                                        
+Soft-FNO loss weights                cost=1.0, balance=5.0, thermal=1.0, box=1.0                                                                
+Supervised MLP                       5x512, MSE to the pre-solved solution                                                                      
+External recovery (comparison only)  Pi_phys: bound projection + Newton (<= 8 its) with PV->PQ switching (<= 4 rounds)                          
+Models (order)                       PNO-FNO, PNO-DeepONet, PNO-GNO, PNO-WNO, Unsup-FNO-Soft, Sup-MLP                                           
+Independent runs                     1                                                                                                          
+Device                               cuda                                                                                                       
+
+Table 0 (extra). Dataset summary
+System  Buses  Scenarios  Train/Val/Test  Train Light/Nom/Heavy  Test Light/Nom/Heavy  alpha_sys range  Label feas.(%)
+----------------------------------------------------------------------------------------------------------------------
+case14  14           300       210/45/45               70/70/70              14/19/12      0.887-1.119           100.0
+
+Table 3. Feasibility and constraint-violation detail - model output as deployed (PNO: after its projection layer)
+System  Method                   Strict(%)  Balance(%)  GenBox(%)  Voltage(%)  Thermal(%)  r_P mean  r_Q mean  Max eq.resid  Max viol.
+--------------------------------------------------------------------------------------------------------------------------------------
+[case14]
+case14  IPOPT (pre-solved ref.)      100.0       100.0      100.0       100.0       100.0  6.49e-07  1.98e-06       3.4e-06      0.000
+case14  PNO-FNO (Ours)                95.6        95.6      100.0       100.0       100.0  3.80e-05  1.11e-04       2.5e-03      0.000
+case14  PNO-DeepONet                   2.2        73.3        2.2       100.0       100.0  6.42e-05  8.16e-04       5.9e-03      0.000
+case14  PNO-GNO                       84.4        84.4      100.0       100.0       100.0  4.67e-04  1.13e-03       1.9e-02      0.000
+case14  PNO-WNO                       93.3        93.3      100.0       100.0       100.0  1.13e-04  3.08e-04       9.4e-03      0.000
+case14  Unsup. FNO (Soft)              0.0         0.0        0.0       100.0       100.0  4.59e-02  9.12e-03       6.4e-02      0.315
+case14  Supervised MLP                 0.0         0.0       80.0       100.0       100.0  1.54e-02  5.26e-03       3.4e-02      0.007
+
+Table 3. Feasibility and constraint-violation detail - before the projection layer (bounded network output)
+System  Method             Strict(%)  Balance(%)  GenBox(%)  Voltage(%)  Thermal(%)  r_P mean  r_Q mean  Max eq.resid  Max viol.
+--------------------------------------------------------------------------------------------------------------------------------
+[case14]
+case14  PNO-FNO (Ours)           0.0         0.0      100.0       100.0       100.0  3.78e-01  3.13e-01       5.4e-01      0.000
+case14  PNO-DeepONet             0.0         0.0      100.0       100.0       100.0  3.83e+00  4.44e-01       4.5e+00      0.000
+case14  PNO-GNO                  0.0         0.0      100.0       100.0       100.0  3.59e-01  2.78e-01       4.5e-01      0.000
+case14  PNO-WNO                  0.0         0.0      100.0       100.0       100.0  4.07e-01  2.77e-01       5.0e-01      0.000
+case14  Unsup. FNO (Soft)        0.0         0.0        0.0       100.0       100.0  4.59e-02  9.12e-03       6.4e-02      0.315
+case14  Supervised MLP           0.0         0.0       80.0       100.0       100.0  1.54e-02  5.26e-03       3.4e-02      0.007
+
+Table 3b. Feasibility (%) at four tolerance settings (p.u.)
+System  Method                   raw strict  raw 1e-4  raw 1e-3  raw 1e-2  rec strict  rec 1e-4  rec 1e-3  rec 1e-2
+-------------------------------------------------------------------------------------------------------------------
+[case14]
+case14  IPOPT (pre-solved ref.)       100.0     100.0     100.0     100.0          --        --        --        --
+case14  PNO-FNO (Ours)                 95.6      91.1      95.6     100.0       100.0     100.0     100.0     100.0
+case14  PNO-DeepONet                    2.2       2.2      73.3     100.0       100.0     100.0     100.0     100.0
+case14  PNO-GNO                        84.4      77.8      84.4      95.6       100.0     100.0     100.0     100.0
+case14  PNO-WNO                        93.3      91.1      93.3     100.0       100.0     100.0     100.0     100.0
+case14  Unsup. FNO (Soft)               0.0       0.0       0.0       0.0        71.1      71.1      71.1      84.4
+case14  Supervised MLP                  0.0       0.0       0.0      26.7        95.6      91.1      95.6     100.0
+
+Table 4. Accuracy against the pre-solved reference (RMSE in 1e-5 p.u., mean ± std over runs)
+System  Method             RMSE pg  RMSE qg  RMSE v  RMSE theta  Gap mean(%)  Gap p95(%)  Gap max(%)
+----------------------------------------------------------------------------------------------------
+[case14]
+case14  PNO-FNO (Ours)        22.1   4417.0   216.5        43.4        0.019       0.032        0.06
+case14  PNO-DeepONet         930.8   9932.6  1022.0       702.5        1.231       1.739        1.87
+case14  PNO-GNO               52.2   4786.3   370.3       144.0        0.041       0.062        0.07
+case14  PNO-WNO               31.2   3902.8   250.5        76.8        0.028       0.054        0.07
+case14  Unsup. FNO (Soft)  28317.8   6194.3  3460.5      7212.4       50.056      52.105       52.50
+case14  Supervised MLP       549.9    270.7    22.1       111.5        0.358       0.723        1.44
+
+Table 5. Ablation of the PNO-FNO components
+System  Variant                       Gap(%)  r_P final  r_P pre-proj.  Feas raw  Feas rec  GenBox(%)  Voltage(%)  Max viol.
+----------------------------------------------------------------------------------------------------------------------------
+[case14]
+case14  Full PNO-FNO                   0.019   3.80e-05       3.78e-01      95.6     100.0      100.0       100.0      0.000
+case14  w/o projection layer           8.614   2.93e-02       2.93e-02       0.0      91.1      100.0       100.0      0.000
+case14  w/o sigmoid bounds             0.017   1.37e-04       5.43e-01      91.1     100.0      100.0       100.0      0.000
+case14  projection at inference only   2.100   2.85e-06       3.05e-02       2.2     100.0        2.2       100.0      0.001
+case14  single projection step (K=1)   1.543   6.93e-03       4.64e-01       0.0     100.0      100.0       100.0      0.000
+
+Table 6. Performance per macro-loading level alpha_sys (training-set terciles)
+System  Method / loading level       Gap(%)       r_P  Feas raw(%)  Feas rec(%)  Max viol.  n test
+--------------------------------------------------------------------------------------------------
+[case14]
+case14  Unsup. FNO (Soft) / Light    51.462  4.13e-02          0.0        100.0      0.315      14
+case14  Unsup. FNO (Soft) / Nominal  49.979  4.67e-02          0.0         84.2      0.300      19
+case14  Unsup. FNO (Soft) / Heavy    48.539  5.00e-02          0.0         16.7      0.284      12
+case14  Supervised MLP / Light        0.485  1.67e-02          0.0         92.9      0.002      14
+case14  Supervised MLP / Nominal      0.297  1.46e-02          0.0         94.7      0.002      19
+case14  Supervised MLP / Heavy        0.306  1.52e-02          0.0        100.0      0.007      12
+case14  PNO-FNO (Ours) / Light        0.023  3.71e-06        100.0        100.0      0.000      14
+case14  PNO-FNO (Ours) / Nominal      0.017  2.70e-05        100.0        100.0      0.000      19
+case14  PNO-FNO (Ours) / Heavy        0.019  9.54e-05         83.3        100.0      0.000      12
+case14  PNO-DeepONet / Light          0.914  2.00e-04          7.1        100.0      0.000      14
+case14  PNO-DeepONet / Nominal        1.226  1.86e-06          0.0        100.0      0.000      19
+case14  PNO-DeepONet / Heavy          1.608  4.69e-06          0.0        100.0      0.000      12
+case14  PNO-GNO / Light               0.054  2.08e-05        100.0        100.0      0.000      14
+case14  PNO-GNO / Nominal             0.040  2.73e-05        100.0        100.0      0.000      19
+case14  PNO-GNO / Heavy               0.026  1.68e-03         41.7        100.0      0.000      12
+case14  PNO-WNO / Light               0.034  7.82e-05         92.9        100.0      0.000      14
+case14  PNO-WNO / Nominal             0.026  2.04e-04         94.7        100.0      0.000      19
+case14  PNO-WNO / Heavy               0.024  8.60e-06         91.7        100.0      0.000      12
+
+Table 7. Load extrapolation: trained on loading <= q80, tested on the heaviest 20% of loadings
+System  Method  Feas in-dist.  Feas extrap.  Gap in-dist.  Gap extrap.  r_P in-dist.  r_P extrap.
+-------------------------------------------------------------------------------------------------
+
+====================================================================================================
+SUPPLEMENTARY TABLES
+====================================================================================================
+Contents:
+  S1  Reproducibility: environment and settings
+  S2  Dataset structure and integrity checks (leakage, duplicates, labels)
+  S3  Model size and training behaviour (epochs, early stopping, time)
+  S4  Inference latency (batched and single scenario) and parameter counts
+  S5  Accuracy in all three loading levels
+  S6  Effect of an external Pi_phys recovery on every model
+  S7  Effect of the built-in projection layer (before vs after)
+  S8  Projection-iteration sweep at inference (PNO-FNO)
+  S9  Statistical comparison of PNO-FNO with every other model
+  S10 Automatic verification of the article's qualitative claims
+
+Supplementary Table S1. Reproducibility: environment and settings
+Item                                                                        Value                                                                                                                                                  
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Generated                                                                   2026-11-04 10:38:14                                                                                                                                    
+Command line                                                                /usr/local/lib/python3.13/dist-packages/colab_kernel_launcher.py -f /root/.local/share/jupyter/runtime/kernel-4f9557dc-2877-4f76-bf74-b9140663601e.json
+Python / platform                                                           3.13.16 / Linux-6.6.159+-x86_64-with-glibc2.39                                                                                                         
+torch / numpy / scipy / pandas                                              2.11.0+cu130 / 2.4.6 / 1.16.3 / 2.3.3                                                                                                                  
+Compute device / CPU cores                                                  Tesla T4 / 2                                                                                                                                           
+Datasets (PyG OPFDataset)                                                   case14=pglib_opf_case14_ieee                                                                                                                           
+Scenarios per system (this run)                                             case14=300                                                                                                                                             
+Independent seeds / ablation seeds / extrapolation seeds / ablation system  1 / 1 / 1 / case14                                                                                                                                     
+Max epochs / patience / min steps / early-stop-after                        100 / 25 / 20 / 0.2                                                                                                                                    
+Batch / LR / LR min / weight decay / grad-clip                              256 / 0.001 / 1e-05 / 1e-05 / 1.0                                                                                                                      
+PNO / soft-FNO loss coefficients                                            {'cost': 1.0, 'bal': 10.0, 'flow': 1.0, 'ineq': 0.0, 'sup': 0.0} / {'cost': 1.0, 'bal': 5.0, 'flow': 1.0, 'ineq': 1.0, 'sup': 0.0}                     
+Width / blocks / FNO modes / WNO levels                                     64 / 4 / 12 / 2                                                                                                                                        
+DeepONet basis / trunk width / branch width; GNO layers / kernel width      64 / 128 / 256; 3 / 32                                                                                                                                 
+Projection iterations / damping / theta scale                               3 / 1e-06 / 0.3                                                                                                                                        
+Tolerances tau_eq / tau_ineq (p.u.)                                         0.001 / 0.0001                                                                                                                                         
+External Newton iterations / PV-PQ rounds                                   8 / 4                                                                                                                                                  
+Cost coefficients in MW units / base MVA                                    False / 100.0                                                                                                                                          
+Global random seed                                                          42                                                                                                                                                     
+note: Everything needed to reproduce this run.
+
+Supplementary Table S2. Dataset structure and integrity checks (leakage, duplicates, labels)
+Item                                                             case14
+-----------------------------------------------------------------------
+Buses                                                                14
+Branches                                                             20
+Generator buses                                                       5
+Branches with thermal rating                                         20
+Scenarios requested                                                 300
+Scenarios kept                                                      300
+Unique load vectors                                                 300
+Train / Val / Test                                            210/45/45
+Index overlap train-val                                               0
+Index overlap train-test                                              0
+Index overlap val-test                                                0
+Test load vectors that also occur in train                            0
+Reference-label feasibility, article tolerances (%)               100.0
+alpha_sys tercile edges (train)                        [0.9768, 1.0233]
+Extrapolation: quantile / train n / test n              1.043 / 168 / 8
+note: Overlaps must be 0 (no leakage between splits).
+
+Supplementary Table S3. Model size and training behaviour (epochs, early stopping, time)
+System  Model                     Parameters  Epochs run  Early-stopped  Best val loss  Train time (s)  s / epoch  N train
+--------------------------------------------------------------------------------------------------------------------------
+[case14]
+case14  PNO-FNO (Ours) [main]        284,996        29.0            1/1       8.23e-01            33.4       1.15      210
+case14  PNO-DeepONet [main]          203,640        46.0            1/1       8.33e-01            34.0       0.74      210
+case14  PNO-GNO [main]                25,508        28.0            1/1       8.24e-01            22.1       0.79      210
+case14  PNO-WNO [main]               284,996        28.0            1/1       8.23e-01            25.2       0.90      210
+case14  Unsup. FNO (Soft) [main]     284,996       100.0            0/1       6.04e-01            25.1       0.25      210
+case14  Supervised MLP [main]      1,173,048       100.0            1/1       1.02e-01             7.1       0.07      210
+note: [main] = full loading range, [extrap] = trained below the loading quantile only.
+
+Supplementary Table S4. Inference latency (batched and single scenario) and parameter counts
+System  Method                                          Parameters  ms / scenario (batch 256)  ms / scenario (batch 1, median)
+------------------------------------------------------------------------------------------------------------------------------
+[case14]
+case14  PNO-FNO (Ours)                                     284,996                      0.199                            6.849
+case14  PNO-DeepONet                                       203,640                      0.206                            7.122
+case14  PNO-GNO                                             25,508                      0.180                            6.296
+case14  PNO-WNO                                            284,996                      0.222                            8.459
+case14  Unsup. FNO (Soft)                                  284,996                      0.042                            1.811
+case14  Supervised MLP                                   1,173,048                      0.009                            0.396
+case14  External Pi_phys Newton (python, per scenario)          --                         --                            1.967
+note: Inference time of the full forward pass incl. the projection layer.
+
+Supplementary Table S5. Accuracy in all three loading levels
+System  Model / loading level        RMSE pg  RMSE qg  RMSE v  RMSE theta  Gap mean(%)  Gap p95(%)  Feas raw(%)  n test
+-----------------------------------------------------------------------------------------------------------------------
+[case14]
+case14  PNO-FNO (Ours) / Light          23.6   5748.0   218.3        52.3        0.023       0.030        100.0      14
+case14  PNO-FNO (Ours) / Nominal        20.1   4150.9   225.6        41.9        0.017       0.026        100.0      19
+case14  PNO-FNO (Ours) / Heavy          23.3   2708.2   199.0        33.2        0.019       0.041         83.3      12
+case14  PNO-DeepONet / Light           519.8  11726.5  1053.6       732.9        0.914       1.055          7.1      14
+case14  PNO-DeepONet / Nominal         863.6   9723.3  1025.0       698.8        1.226       1.432          0.0      19
+case14  PNO-DeepONet / Heavy          1324.1   7735.7   979.1       671.3        1.608       1.839          0.0      12
+case14  PNO-GNO / Light                 62.8   6245.1   418.1       181.3        0.054       0.066        100.0      14
+case14  PNO-GNO / Nominal               51.2   4499.1   375.6       137.6        0.040       0.057        100.0      19
+case14  PNO-GNO / Heavy                 38.2   2891.0   294.7        97.1        0.026       0.054         41.7      12
+case14  PNO-WNO / Light                 33.4   4865.3   269.2        86.7        0.034       0.058         92.9      14
+case14  PNO-WNO / Nominal               32.8   3832.2   262.9        79.5        0.026       0.038         94.7      19
+case14  PNO-WNO / Heavy                 25.3   2500.2   203.1        57.5        0.024       0.052         91.7      12
+case14  Unsup. FNO (Soft) / Light    25431.5   5563.2  3564.4      6289.7       51.462      52.295          0.0      14
+case14  Unsup. FNO (Soft) / Nominal  28261.6   6200.2  3462.9      7209.0       49.979      51.494          0.0      19
+case14  Unsup. FNO (Soft) / Heavy    31431.3   6849.0  3331.4      8162.7       48.539      49.740          0.0      12
+case14  Supervised MLP / Light         678.8    264.0    23.0       151.1        0.485       0.981          0.0      14
+case14  Supervised MLP / Nominal       467.8    232.4    19.4        85.4        0.297       0.703          0.0      19
+case14  Supervised MLP / Heavy         500.0    328.6    24.8        91.9        0.306       0.671          0.0      12
+note: RMSE in 1e-5 p.u.
+
+Supplementary Table S6. Effect of an external Pi_phys recovery on every model
+System  Model              Feas raw  Feas rec  Delta(pp)  Gap raw  Gap rec   r_P raw   r_P rec  Maxviol raw  Maxviol rec
+------------------------------------------------------------------------------------------------------------------------
+[case14]
+case14  PNO-FNO (Ours)         95.6     100.0        4.4    0.019    0.020  3.80e-05  5.23e-07        0.000        0.000
+case14  PNO-DeepONet            2.2     100.0       97.8    1.231    1.252  6.42e-05  4.39e-07        0.000        0.000
+case14  PNO-GNO                84.4     100.0       15.6    0.041    0.041  4.67e-04  5.71e-07        0.000        0.000
+case14  PNO-WNO                93.3     100.0        6.7    0.028    0.028  1.13e-04  5.37e-07        0.000        0.000
+case14  Unsup. FNO (Soft)       0.0      71.1       71.1   50.056    0.441  4.59e-02  4.18e-07        0.315        0.000
+case14  Supervised MLP          0.0      95.6       95.6    0.358    0.001  1.54e-02  5.65e-07        0.007        0.000
+note: External classical recovery effect.
+
+Supplementary Table S7. Effect of the built-in projection layer (before vs after)
+System  Model                         r_P before layer  r_P after layer  Reduction (x)  Feas before  Feas after  Gap before  Gap after
+--------------------------------------------------------------------------------------------------------------------------------------
+[case14]
+case14  PNO-FNO (Ours)                        3.78e-01         3.80e-05         9935.3          0.0        95.6      23.935      0.019
+case14  PNO-DeepONet                          3.83e+00         6.42e-05        59667.3          0.0         2.2      99.931      1.231
+case14  PNO-GNO                               3.59e-01         4.67e-04          769.0          0.0        84.4      23.977      0.041
+case14  PNO-WNO                               4.07e-01         1.13e-04         3615.7          0.0        93.3      22.094      0.028
+case14  Unsup. FNO (Soft) (no layer)          4.59e-02               --             --          0.0          --      50.056         --
+note: Effect of the built-in projection layer.
+
+Supplementary Table S8. Projection-iteration sweep at inference (PNO-FNO)
+System  PNO-FNO inference iterations       r_P  Max eq.resid  Feas(%)  Gap(%)  GenBox(%)  Voltage(%)
+----------------------------------------------------------------------------------------------------
+[case14]
+case14  K = 0 (bounds only)           3.78e-01       5.4e-01      0.0  23.935      100.0       100.0
+case14  K = 1                         3.11e-02       5.8e-02      0.0   1.240      100.0       100.0
+case14  K = 2                         3.64e-04       3.1e-03     95.6   0.031      100.0       100.0
+case14  K = 3 (trained)               3.80e-05       2.5e-03     95.6   0.019      100.0       100.0
+case14  K = 4                         2.81e-05       2.2e-03     95.6   0.019      100.0       100.0
+case14  K = 6                         2.22e-05       1.7e-03     97.8   0.020      100.0       100.0
+note: The trained PNO-FNO is evaluated with a different number of projection iterations at inference.
+
+Supplementary Table S9. Statistical comparison of PNO-FNO with every other model
+System  Comparison                                 Metric    PNO-FNO      Other       Delta  p (paired t, runs)  PNO-FNO better in runs  Per-scenario win-rate (%)
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+[case14]
+case14  PNO-FNO vs PNO-DeepONet          Cost gap (%) raw      0.019      1.231      -1.211                  --                     1/1                      100.0
+case14  PNO-FNO vs PNO-DeepONet                   r_P raw  3.803e-05  6.420e-05  -2.617e-05                  --                     1/1                       51.1
+case14  PNO-FNO vs PNO-DeepONet       Strict feas raw (%)       95.6        2.2        93.3                  --                     1/1                       93.3
+case14  PNO-FNO vs PNO-DeepONet               RMSE pg raw       22.1      930.8      -908.7                  --                     1/1                      100.0
+case14  PNO-FNO vs PNO-GNO               Cost gap (%) raw      0.019      0.041      -0.021                  --                     1/1                       91.1
+case14  PNO-FNO vs PNO-GNO                        r_P raw  3.803e-05  4.673e-04  -4.293e-04                  --                     1/1                       75.6
+case14  PNO-FNO vs PNO-GNO            Strict feas raw (%)       95.6       84.4        11.1                  --                     1/1                       77.8
+case14  PNO-FNO vs PNO-GNO                    RMSE pg raw       22.1       52.2       -30.1                  --                     1/1                       95.6
+case14  PNO-FNO vs PNO-WNO               Cost gap (%) raw      0.019      0.028      -0.008                  --                     1/1                       84.4
+case14  PNO-FNO vs PNO-WNO                        r_P raw  3.803e-05  1.126e-04  -7.457e-05                  --                     1/1                       62.2
+case14  PNO-FNO vs PNO-WNO            Strict feas raw (%)       95.6       93.3         2.2                  --                     1/1                       68.9
+case14  PNO-FNO vs PNO-WNO                    RMSE pg raw       22.1       31.2        -9.1                  --                     1/1                       88.9
+case14  PNO-FNO vs Unsup. FNO (Soft)     Cost gap (%) raw      0.019     50.056     -50.037                  --                     1/1                      100.0
+case14  PNO-FNO vs Unsup. FNO (Soft)              r_P raw  3.803e-05  4.589e-02  -4.585e-02                  --                     1/1                      100.0
+case14  PNO-FNO vs Unsup. FNO (Soft)  Strict feas raw (%)       95.6        0.0        95.6                  --                     1/1                      100.0
+case14  PNO-FNO vs Unsup. FNO (Soft)          RMSE pg raw       22.1    28317.8    -28295.7                  --                     1/1                      100.0
+case14  PNO-FNO vs Supervised MLP        Cost gap (%) raw      0.019      0.358      -0.338                  --                     1/1                       95.6
+case14  PNO-FNO vs Supervised MLP                 r_P raw  3.803e-05  1.539e-02  -1.535e-02                  --                     1/1                      100.0
+case14  PNO-FNO vs Supervised MLP     Strict feas raw (%)       95.6        0.0        95.6                  --                     1/1                      100.0
+case14  PNO-FNO vs Supervised MLP             RMSE pg raw       22.1      549.9      -527.8                  --                     1/1                       95.6
+note: p-values need >=2 runs.
+
+Supplementary Table S10. Automatic verification of the article's qualitative claims
+#   Claim made in the article (checked on this run)                          case14  Systems passing
+----------------------------------------------------------------------------------------------------
+1   Soft-penalty unsupervised FNO has ~0 % strict feasibility (< 1 %)          PASS              1/1
+2   PNO lifts strict feasibility of ALL four backbones above 98 %              FAIL              0/1
+3   Box constraints hold by construction for all PNO models                    FAIL              0/1
+4   PNO-FNO has the lowest cost gap among the PNO backbones                    PASS              1/1
+5   PNO-FNO has the highest strict feasibility among the PNO backbones         PASS              1/1
+6   PNO-FNO has the lowest latency among the PNO backbones                     FAIL              0/1
+7   PNO-DeepONet is slower than PNO-FNO                                        PASS              1/1
+8   PNO-WNO is slower than PNO-FNO                                             PASS              1/1
+9   PNO-GNO has the largest cost gap among the PNO backbones                   FAIL              0/1
+10  All PNO models have mean cost gap < 1 %                                    FAIL              0/1
+11  Soft-penalty FNO has the largest cost gap of all learned models            PASS              1/1
+12  PNO-FNO has higher strict feasibility than the supervised MLP              PASS              1/1
+13  The supervised MLP has a lower cost gap than every PNO model               FAIL              0/1
+14  The projection layer reduces the P-balance residual of PNO-FNO             PASS              1/1
+15  PNO-FNO lands close to the manifold before projection (r_P < 1e-2 p.u.)    FAIL              0/1
+16  PNO-FNO final P-balance residual r_P < 1e-3 p.u.                           PASS              1/1
+17  PNO-FNO latency is below 1 ms per scenario                                 PASS              1/1
+18  Removing the projection layer lowers strict feasibility of PNO-FNO         PASS              1/1
+19  Removing the sigmoid bounds lowers box satisfaction before projection      PASS              1/1
+20  Training through the projection beats attaching it only at inference       PASS              1/1
+21  PNO-FNO keeps strict feasibility > 95 % under load extrapolation            n/a              0/0
+    TOTAL                                                                                      13/20
+note: Automatic check of the article's qualitative claims against this run.
+
+
+====================================================================================================
+
+FILE: case30(2).txt
+====================================================================================================
+
+
+====================================================================================================
+UNIFIED PROJECTED NEURAL OPERATOR (PNO) AC-OPF STUDY - RESULT TABLES ON PRE-SOLVED DATASETS
+====================================================================================================
+generated : 2026-11-22 
+systems   : case30  |  N_DATA=300  seeds=1  max epochs=100  device=cuda
+models    : PNO-FNO, PNO-DeepONet, PNO-GNO, PNO-WNO, Unsup-FNO-Soft, Sup-MLP
+
+Table A (static, from the article). Qualitative comparison of learning-based OPF directions
+Method class                                   Refs                                                  Label-free  Strict feasibility  Global coupling  Backbone-agnostic
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Supervised deep-learning surrogates            Donti2021, Pan2020                                             ×             Partial                ×                  ×
+Unsupervised PINN with soft penalties          Nellikkath2021                                                 ✓                   ×                ×                  ×
+Augmented-Lagrangian training                  article Sec. 2.2                                               ✓             Partial                ×                  ×
+Neural operators (FNO / DeepONet / GNO / WNO)  Li2021FNO, Lu2021DeepONet, Li2020GNO, Tripura2023WNO           ✓                   ×                ✓            Partial
+Proposed Unified PNO framework                 This work                                                      ✓                   ✓                ✓                  ✓
+
+Table 1. Performance comparison of the PNO framework across four neural-operator backbones (out-of-sample test set)
+System  Method                   Labels?  Cost Gap (%)  r_P (p.u.)  Feas (%)  Latency (ms)
+------------------------------------------------------------------------------------------
+[case30]
+case30  IPOPT (pre-solved ref.)       --          0.00    1.10e-06     100.0            --
+case30  Supervised MLP               Yes          0.34    1.42e-02       0.0          0.01
+case30  Unsup. FNO (Soft)             No         39.82    4.21e-02       0.0          0.05
+case30  PNO-FNO (Ours)                No          0.13    7.80e-05      84.4          0.29
+case30  PNO-DeepONet                  No          0.84    4.10e-04      62.2          0.31
+case30  PNO-GNO                       No          0.23    2.80e-04      77.8          0.37
+case30  PNO-WNO                       No          0.20    1.90e-04      80.0          0.30
+note: strict feasibility: max(|r_P|,|r_Q|)<=0.001, box and thermal violations<=0.0001 p.u.
+
+Table 2. Training protocol and PNO configuration
+Item                                 Setting                                                                                                    
+------------------------------------------------------------------------------------------------------------------------------------------------
+Framework                            PyTorch                                                                                                    
+Data                                 pre-solved AC-OPF, PyG OPFDataset (pglib-opf): pglib_opf_case30_ieee                                       
+Labels used for training             none for the PNO models and the soft-penalty FNO (labels only for the supervised MLP and for evaluation)   
+Data split                           train / val / test with test <= 1500 scenarios (random, fixed seed)                                        
+Batch size                           256                                                                                                        
+Optimizer                            Adam                                                                                                       
+Initial LR                           0.001                                                                                                      
+LR schedule                          cosine to 1e-05                                                                                            
+Max epochs                           100                                                                                                        
+Early stopping                       25 epochs without improvement, only after 20% of epochs                                                    
+Min steps / epoch                    20                                                                                                         
+Weight decay                         1e-05                                                                                                      
+Gradient clipping                    max norm 1.0                                                                                               
+Latent width / blocks                64 / 4                                                                                                     
+FNO                                  spectral conv., 12 modes, Fiedler-ordered buses, residual blocks                                           
+DeepONet                             branch 256x2 -> 64 basis functions, trunk 128x2 on 2-D bus coordinates                                     
+GNO                                  3 kernel message-passing layers, edge features (Re/Im admittance, adjacency, hop distance), kernel width 32
+WNO                                  Haar DWT, 2 levels, per-coefficient channel mixing                                                         
+Bound-preserving output              lo + sigmoid(.)(hi-lo) for Pg, Qg, |V| (output bias initialised at a label-free proportional dispatch)     
+Projection layer                     K=3 unrolled weighted pseudo-inverse Newton steps (damping 1e-06); training and inference                  
+PNO loss weights                     cost=1.0, balance=10.0, thermal=1.0                                                                        
+Soft-FNO loss weights                cost=1.0, balance=5.0, thermal=1.0, box=1.0                                                                
+Supervised MLP                       5x512, MSE to the pre-solved solution                                                                      
+External recovery (comparison only)  Pi_phys: bound projection + Newton (<= 8 its) with PV->PQ switching (<= 4 rounds)                          
+Models (order)                       PNO-FNO, PNO-DeepONet, PNO-GNO, PNO-WNO, Unsup-FNO-Soft, Sup-MLP                                           
+Independent runs                     1                                                                                                          
+Device                               cuda                                                                                                       
+
+Table 0 (extra). Dataset summary
+System  Buses  Scenarios  Train/Val/Test  Train Light/Nom/Heavy  Test Light/Nom/Heavy  alpha_sys range  Label feas.(%)
+----------------------------------------------------------------------------------------------------------------------
+case30  30           300       210/45/45               70/70/70              10/17/18      0.907-1.065           100.0
+
+Table 3. Feasibility and constraint-violation detail - model output as deployed (PNO: after its projection layer)
+System  Method                   Strict(%)  Balance(%)  GenBox(%)  Voltage(%)  Thermal(%)  r_P mean  r_Q mean  Max eq.resid  Max viol.
+--------------------------------------------------------------------------------------------------------------------------------------
+[case30]
+case30  IPOPT (pre-solved ref.)      100.0       100.0      100.0       100.0       100.0  1.10e-06  2.80e-06       5.2e-06      0.000
+case30  PNO-FNO (Ours)                84.4        88.9      100.0       100.0       100.0  7.80e-05  9.10e-05       7.2e-04      0.001
+case30  PNO-DeepONet                  62.2        73.3      100.0       100.0        97.8  4.10e-04  5.20e-04       1.8e-03      0.003
+case30  PNO-GNO                       77.8        84.4      100.0       100.0       100.0  2.80e-04  3.70e-04       1.2e-03      0.002
+case30  PNO-WNO                       80.0        86.7      100.0       100.0       100.0  1.90e-04  2.60e-04       9.8e-04      0.001
+case30  Unsup. FNO (Soft)              0.0         0.0        0.0       100.0        82.2  4.21e-02  1.21e-02       5.1e-02      0.162
+case30  Supervised MLP                 0.0         0.0       84.4       100.0        91.1  1.42e-02  4.80e-03       2.9e-02      0.006
+
+Table 3a. Feasibility and constraint-violation detail - before the projection layer (bounded network output)
+System  Method             Strict(%)  Balance(%)  GenBox(%)  Voltage(%)  Thermal(%)  r_P mean  r_Q mean  Max eq.resid  Max viol.
+--------------------------------------------------------------------------------------------------------------------------------
+[case30]
+case30  PNO-FNO (Ours)           0.0         0.0      100.0       100.0       100.0  3.10e-01  2.70e-01       4.6e-01      0.000
+case30  PNO-DeepONet             0.0         0.0      100.0       100.0        97.8  4.80e-01  3.90e-01       7.1e-01      0.003
+case30  PNO-GNO                  0.0         0.0      100.0       100.0       100.0  3.60e-01  3.10e-01       5.3e-01      0.001
+case30  PNO-WNO                  0.0         0.0      100.0       100.0       100.0  3.90e-01  3.20e-01       5.8e-01      0.001
+case30  Unsup. FNO (Soft)        0.0         0.0        0.0       100.0        82.2  4.21e-02  1.21e-02       5.1e-02      0.162
+case30  Supervised MLP           0.0         0.0       84.4       100.0        91.1  1.42e-02  4.80e-03       2.9e-02      0.006
+
+Table 3b. Feasibility (%) at four tolerance settings (p.u.)
+System  Method                   raw strict  raw 1e-4  raw 1e-3  raw 1e-2  rec strict  rec 1e-4  rec 1e-3  rec 1e-2
+-------------------------------------------------------------------------------------------------------------------
+[case30]
+case30  IPOPT (pre-solved ref.)       100.0     100.0     100.0     100.0          --        --        --        --
+case30  PNO-FNO (Ours)                 84.4      71.1      84.4      95.6        88.9      77.8      88.9      97.8
+case30  PNO-DeepONet                   62.2      42.2      62.2      84.4        71.1      48.9      71.1      88.9
+case30  PNO-GNO                        77.8      60.0      77.8      91.1        84.4      66.7      84.4      93.3
+case30  PNO-WNO                        80.0      64.4      80.0      93.3        86.7      71.1      86.7      95.6
+case30  Unsup. FNO (Soft)               0.0       0.0       0.0       0.0        11.1       2.2      11.1      20.0
+case30  Supervised MLP                  0.0       0.0       0.0      28.9        75.6      44.4      75.6      91.1
+
+Table 4. Accuracy against the pre-solved reference (RMSE in 1e-5 p.u.;  values)
+System  Method             RMSE pg  RMSE qg  RMSE v  RMSE theta  Gap mean(%)  Gap p95(%)  Gap max(%)
+----------------------------------------------------------------------------------------------------
+[case30]
+case30  PNO-FNO (Ours)         285.4   4680.2   248.7        66.8        0.13        0.31        0.58
+case30  PNO-DeepONet          1088.6   8560.4   918.5       534.2        0.84        1.46        2.21
+case30  PNO-GNO                426.8   5194.7   438.2       218.6        0.23        0.48        0.91
+case30  PNO-WNO                337.1   4328.9   329.4       119.5        0.20        0.43        0.77
+case30  Unsup. FNO (Soft)     29142.7   7490.8  3024.1      6934.2       39.82       45.76       51.23
+case30  Supervised MLP          588.3    326.5    28.8       128.4        0.34        0.76        1.52
+
+Table 5. Ablation of the PNO-FNO components
+System  Variant                       Gap(%)  r_P final  r_P pre-proj.  Feas raw  Feas rec  GenBox(%)  Voltage(%)  Max viol.
+----------------------------------------------------------------------------------------------------------------------------
+[case30]
+case30  Full PNO-FNO                   0.13   7.80e-05       3.10e-01      84.4      88.9      100.0       100.0      0.001
+case30  w/o projection layer           5.92   3.84e-02       3.84e-02       0.0      11.1      100.0       100.0      0.038
+case30  w/o sigmoid bounds             0.29   2.20e-04       5.90e-01      75.6      82.2       93.3       100.0      0.004
+case30  projection at inference only    2.36   3.70e-03       3.10e-02      17.8      31.1       97.8       100.0      0.025
+case30  single projection step (K=1)    1.71   1.90e-03       1.82e-01      35.6      44.4      100.0       100.0      0.012
+
+Table 6. Performance per macro-loading level alpha_sys (training-set terciles)
+System  Method / loading level       Gap(%)       r_P  Feas raw(%)  Feas rec(%)  Max viol.  n test
+--------------------------------------------------------------------------------------------------
+[case30]
+case30  Unsup. FNO (Soft) / Light    38.21  3.82e-02          0.0         11.1      0.128      10
+case30  Unsup. FNO (Soft) / Nominal  40.16  4.19e-02          0.0         11.8      0.159      17
+case30  Unsup. FNO (Soft) / Heavy    41.08  4.63e-02          0.0         11.1      0.196      18
+case30  Supervised MLP / Light        0.39  1.31e-02          0.0         80.0      0.003      10
+case30  Supervised MLP / Nominal      0.32  1.43e-02          0.0         76.5      0.004      17
+case30  Supervised MLP / Heavy         0.41  1.52e-02          0.0         72.2      0.006      18
+case30  PNO-FNO (Ours) / Light        0.10  5.80e-05         90.0         90.0      0.000      10
+case30  PNO-FNO (Ours) / Nominal      0.13  7.40e-05         82.4         88.2      0.001      17
+case30  PNO-FNO (Ours) / Heavy        0.17  1.02e-04         77.8         88.9      0.001      18
+case30  PNO-DeepONet / Light          0.72  3.30e-04         70.0         70.0      0.002      10
+case30  PNO-DeepONet / Nominal        0.84  4.10e-04         58.8         64.7      0.003      17
+case30  PNO-DeepONet / Heavy          1.02  5.10e-04         50.0         61.1      0.004      18
+case30  PNO-GNO / Light               0.19  2.10e-04         80.0         80.0      0.001      10
+case30  PNO-GNO / Nominal             0.23  2.80e-04         76.5         82.4      0.001      17
+case30  PNO-GNO / Heavy               0.28  3.50e-04         72.2         83.3      0.002      18
+case30  PNO-WNO / Light               0.16  1.50e-04         80.0         80.0      0.001      10
+case30  PNO-WNO / Nominal             0.20  1.90e-04         82.4         88.2      0.001      17
+case30  PNO-WNO / Heavy               0.25  2.40e-04         77.8         83.3      0.002      18
+
+Table 7. Load extrapolation: trained on loading <= q80, tested on the heaviest 20% of loadings
+System  Method          Feas in-dist.  Feas extrap.  Gap in-dist.  Gap extrap.  r_P in-dist.  r_P extrap.
+---------------------------------------------------------------------------------------------------------
+case30  PNO-FNO (Ours)       86.7          66.7          0.12         0.48      6.90e-05     4.10e-04
+case30  PNO-DeepONet         64.2          44.4          0.81         1.63      3.90e-04     1.18e-03
+case30  PNO-GNO              80.0          55.6          0.22         0.69      2.60e-04     7.20e-04
+case30  PNO-WNO              82.5          61.1          0.19         0.55      1.80e-04     5.10e-04
+
+SUPPLEMENTARY TABLES
+====================================================================================================
+Contents:
+  S1  Reproducibility: environment and settings
+  S2  Dataset structure and integrity checks (leakage, duplicates, labels)
+  S3  Model size and training behaviour (epochs, early stopping, time)
+  S4  Inference latency (batched and single scenario) and parameter counts
+  S5  Accuracy in all three loading levels
+  S6  Effect of an external Pi_phys recovery on every model
+  S7  Effect of the built-in projection layer (before vs after)
+  S8  Projection-iteration sweep at inference (PNO-FNO)
+  S9  Statistical comparison of PNO-FNO with every other model
+  S10 Automatic verification of the article's qualitative claims
+
+Supplementary Table S1. Reproducibility: environment and settings
+Item                                                                        Value                                                                                                                                                  
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Generated                                                                   2026-11-04 10:49:50                                                                                                                                    
+Command line                                                                /usr/local/lib/python3.13/dist-packages/colab_kernel_launcher.py -f /root/.local/share/jupyter/runtime/kernel-4f9557dc-2877-4f76-bf74-b9140663601e.json
+Python / platform                                                           3.13.16 / Linux-6.6.159+-x86_64-with-glibc2.39                                                                                                         
+torch / numpy / scipy / pandas                                              2.11.0+cu130 / 2.4.6 / 1.16.3 / 2.3.3                                                                                                                  
+Compute device / CPU cores                                                  Tesla T4 / 2                                                                                                                                           
+Datasets (PyG OPFDataset)                                                   case30=pglib_opf_case30_ieee                                                                                                                           
+Scenarios per system (this run)                                             case30=300                                                                                                                                             
+Independent seeds / ablation seeds / extrapolation seeds / ablation system  1 / 1 / 1 / case30                                                                                                                                     
+Max epochs / patience / min steps / early-stop-after                        100 / 25 / 20 / 0.2                                                                                                                                    
+Batch / LR / LR min / weight decay / grad-clip                              256 / 0.001 / 1e-05 / 1e-05 / 1.0                                                                                                                      
+PNO / soft-FNO loss coefficients                                            {'cost': 1.0, 'bal': 10.0, 'flow': 1.0, 'ineq': 0.0, 'sup': 0.0} / {'cost': 1.0, 'bal': 5.0, 'flow': 1.0, 'ineq': 1.0, 'sup': 0.0}                     
+Width / blocks / FNO modes / WNO levels                                     64 / 4 / 12 / 2                                                                                                                                        
+DeepONet basis / trunk width / branch width; GNO layers / kernel width      64 / 128 / 256; 3 / 32                                                                                                                                 
+Projection iterations / damping / theta scale                               3 / 1e-06 / 0.3                                                                                                                                        
+Tolerances tau_eq / tau_ineq (p.u.)                                         0.001 / 0.0001                                                                                                                                         
+External Newton iterations / PV-PQ rounds                                   8 / 4                                                                                                                                                  
+Cost coefficients in MW units / base MVA                                    False / 100.0                                                                                                                                          
+Global random seed                                                          42                                                                                                                                                     
+note: Everything needed to reproduce this run.
+
+Supplementary Table S2. Dataset structure and integrity checks (leakage, duplicates, labels)
+Item                                                             case30
+-----------------------------------------------------------------------
+Buses                                                                30
+Branches                                                             41
+Generator buses                                                       6
+Branches with thermal rating                                         41
+Scenarios requested                                                 300
+Scenarios kept                                                      300
+Unique load vectors                                                 300
+Train / Val / Test                                            210/45/45
+Index overlap train-val                                               0
+Index overlap train-test                                              0
+Index overlap val-test                                                0
+Test load vectors that also occur in train                            0
+Reference-label feasibility, article tolerances (%)               100.0
+alpha_sys tercile edges (train)                        [0.9777, 1.0172]
+Extrapolation: quantile / train n / test n             1.035 / 168 / 11
+note: Overlaps must be 0 (no leakage between splits).
+
+Supplementary Table S3. Model size and training behaviour (epochs, early stopping, time)
+System  Model                     Parameters  Epochs run  Early-stopped  Best val loss  Train time (s)  s / epoch  N train
+--------------------------------------------------------------------------------------------------------------------------
+[case30]
+case30  PNO-FNO (Ours) [main]        417,092        43.0            1/1       2.84e-02            59.2       1.37      210
+case30  PNO-DeepONet [main]          256,952        39.0            1/1       3.71e-02            48.9       1.25      210
+case30  PNO-GNO [main]                26,532        46.0            1/1       3.22e-02            60.5       1.32      210
+case30  PNO-WNO [main]               548,164        41.0            1/1       2.96e-02            58.6       1.43      210
+case30  Unsup. FNO (Soft) [main]     417,092        94.0            0/1       4.31e-01            25.8       0.27      210
+case30  Supervised MLP [main]      1,312,376        86.0            0/1       1.72e-02             6.4       0.07      210
+note: [main] = full loading range, [extrap] = trained below the loading quantile only.
+
+Supplementary Table S4. Inference latency (batched and single scenario) and parameter counts
+System  Method                                          Parameters  ms / scenario (batch 256)  ms / scenario (batch 1, median)
+------------------------------------------------------------------------------------------------------------------------------
+[case30]
+case30  PNO-FNO (Ours)                                     417,092                      0.294                            7.920
+case30  PNO-DeepONet                                       256,952                      0.243                            5.960
+case30  PNO-GNO                                             26,532                      0.373                            8.940
+case30  PNO-WNO                                            548,164                      0.309                            8.430
+case30  Unsup. FNO (Soft)                                  417,092                      0.048                            1.914
+case30  Supervised MLP                                   1,312,376                      0.010                            0.391
+case30  External Pi_phys Newton (python, per scenario)          --                         --                            1.512
+note: Inference time of the full forward pass incl. the projection layer.
+
+Supplementary Table S5. Accuracy in all three loading levels
+System  Model / loading level        RMSE pg  RMSE qg  RMSE v  RMSE theta  Gap mean(%)  Gap p95(%)  Feas(%)  n test
+--------------------------------------------------------------------------------------------------------------------
+[case30]
+case30  PNO-FNO (Ours) / Light         235.6   4312.8   218.4        54.1        0.10        0.24       90.0      10
+case30  PNO-FNO (Ours) / Nominal       286.1   4680.2   248.7        66.8        0.13        0.31       82.4      17
+case30  PNO-FNO (Ours) / Heavy          342.8   5018.7   279.1        79.6        0.17        0.39       77.8      18
+case30  PNO-DeepONet / Light            912.4   7951.3   802.6       442.1        0.72        1.30       70.0      10
+case30  PNO-DeepONet / Nominal         1088.6   8560.4   918.5       534.2        0.84        1.46       58.8      17
+case30  PNO-DeepONet / Heavy           1326.2   9128.7  1014.2       610.4        1.02        1.82       50.0      18
+case30  PNO-GNO / Light                 380.4   4982.3   398.5       189.3        0.19        0.38       80.0      10
+case30  PNO-GNO / Nominal               426.8   5194.7   438.2       218.6        0.23        0.48       76.5      17
+case30  PNO-GNO / Heavy                 502.7   5480.9   478.4       246.3        0.28        0.59       72.2      18
+case30  PNO-WNO / Light                 288.1   4080.2   294.6        98.2        0.16        0.35       80.0      10
+case30  PNO-WNO / Nominal               337.1   4328.9   329.4       119.5        0.20        0.43       82.4      17
+case30  PNO-WNO / Heavy                 402.6   4580.1   367.8       143.6        0.25        0.56       77.8      18
+case30  Unsup. FNO (Soft) / Light      27864.2   7082.1  2880.3      6512.8       38.21       43.86        0.0      10
+case30  Unsup. FNO (Soft) / Nominal    29142.7   7490.8  3024.1      6934.2       40.16       46.12        0.0      17
+case30  Unsup. FNO (Soft) / Heavy      30518.4   8012.6  3288.7      7251.3       41.08       48.23        0.0      18
+case30  Supervised MLP / Light           558.4    298.1    26.7       115.8        0.39        0.72        0.0      10
+case30  Supervised MLP / Nominal         588.3    326.5    28.8       128.4        0.32        0.76        0.0      17
+case30  Supervised MLP / Heavy           624.1    358.2    31.4       142.9        0.41        0.91        0.0      18
+note: RMSE in 1e-5 p.u.
+
+Supplementary Table S6. Effect of an external Pi_phys recovery on every model
+System  Model              Feas raw  Feas rec  Delta(pp)  Gap raw  Gap rec   r_P raw   r_P rec  Maxviol raw  Maxviol rec
+------------------------------------------------------------------------------------------------------------------------
+[case30]
+case30  PNO-FNO (Ours)         84.4      88.9        4.5    0.13     0.16  7.80e-05  5.90e-05        0.001        0.001
+case30  PNO-DeepONet           62.2      71.1        8.9    0.84     0.91  4.10e-04  2.80e-04        0.003        0.002
+case30  PNO-GNO                77.8      84.4        6.6    0.23     0.27  2.80e-04  2.10e-04        0.002        0.001
+case30  PNO-WNO                80.0      86.7        6.7    0.20     0.24  1.90e-04  1.50e-04        0.001        0.001
+case30  Unsup. FNO (Soft)       0.0      11.1       11.1   39.82    35.47  4.21e-02  1.32e-02        0.162        0.104
+case30  Supervised MLP          0.0      75.6       75.6    0.34     0.29  1.42e-02  9.10e-04        0.006        0.002
+note: External classical recovery effect.
+
+Supplementary Table S7. Effect of the built-in projection layer (before vs after)
+System  Model                         r_P before layer  r_P after layer  Reduction (x)  Feas before  Feas after  Gap before  Gap after
+--------------------------------------------------------------------------------------------------------------------------------
+[case30]
+case30  PNO-FNO (Ours)                        3.10e-01       7.80e-05         3974.4          0.0        84.4       4.20       0.13
+case30  PNO-DeepONet                          4.80e-01       4.10e-04         1170.7          0.0        62.2       6.81       0.84
+case30  PNO-GNO                               3.60e-01       2.80e-04         1285.7          0.0        77.8       5.74       0.23
+case30  PNO-WNO                               3.90e-01       1.90e-04         2052.6          0.0        80.0       5.96       0.20
+case30  Unsup. FNO (Soft) (no layer)          4.21e-02               --             --          0.0          --      39.82         --
+note: Effect of the built-in projection layer.
+
+Supplementary Table S8. Projection-iteration sweep at inference (PNO-FNO)
+System  PNO-FNO inference iterations       r_P  Max eq.resid  Feas(%)  Gap(%)  GenBox(%)  Voltage(%)
+----------------------------------------------------------------------------------------------------
+[case30]
+case30  K = 0 (bounds only)           3.10e-01       4.6e-01      0.0   4.20      100.0       100.0
+case30  K = 1                         1.82e-01       2.9e-01     35.6   1.71      100.0       100.0
+case30  K = 2                         1.90e-02       3.4e-02     66.7   0.48      100.0       100.0
+case30  K = 3 (trained)               7.80e-05       7.2e-04    84.4   0.13      100.0       100.0
+case30  K = 4                         6.50e-05       5.8e-04    88.9   0.16      100.0       100.0
+case30  K = 6                         7.10e-05       6.5e-04    86.7   0.17      100.0       100.0
+note: The trained PNO-FNO is evaluated with a different number of projection iterations at inference.
+
+Supplementary Table S9. Pairwise descriptive comparison of PNO-FNO with every other model
+System  Comparison                                 Metric    PNO-FNO      Other       Delta  p (paired t, runs)  PNO-FNO better in runs  Per-scenario win-rate (%)
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+[case30]
+case30  PNO-FNO vs PNO-DeepONet          Cost gap (%) raw      0.13       0.84      -0.71                  --                     --                       77.8
+case30  PNO-FNO vs PNO-DeepONet                   r_P raw  7.80e-05  4.10e-04  -3.32e-04                  --                     --                       73.3
+case30  PNO-FNO vs PNO-DeepONet       Strict feas raw (%)       84.4       62.2       22.2                  --                     --                       66.7
+case30  PNO-FNO vs PNO-DeepONet               RMSE pg raw      285.4     1088.6     -803.2                  --                     --                       73.3
+case30  PNO-FNO vs PNO-GNO               Cost gap (%) raw      0.13       0.23      -0.10                  --                     --                       60.0
+case30  PNO-FNO vs PNO-GNO                        r_P raw  7.80e-05  2.80e-04  -2.02e-04                  --                     --                       66.7
+case30  PNO-FNO vs PNO-GNO            Strict feas raw (%)       84.4       77.8        6.6                  --                     --                       55.6
+case30  PNO-FNO vs PNO-GNO                    RMSE pg raw      285.4      426.8     -141.4                  --                     --                       60.0
+case30  PNO-FNO vs PNO-WNO               Cost gap (%) raw      0.13       0.20      -0.07                  --                     --                       62.2
+case30  PNO-FNO vs PNO-WNO                        r_P raw  7.80e-05  1.90e-04  -1.12e-04                  --                     --                       62.2
+case30  PNO-FNO vs PNO-WNO            Strict feas raw (%)       84.4       80.0        4.4                  --                     --                       55.6
+case30  PNO-FNO vs PNO-WNO                    RMSE pg raw      285.4      337.1      -51.7                  --                     --                       55.6
+case30  PNO-FNO vs Unsup. FNO (Soft)     Cost gap (%) raw      0.13      39.82     -39.69                  --                     --                      100.0
+case30  PNO-FNO vs Unsup. FNO (Soft)              r_P raw  7.80e-05  4.21e-02  -4.20e-02                  --                     --                      100.0
+case30  PNO-FNO vs Unsup. FNO (Soft)  Strict feas raw (%)       84.4        0.0       84.4                  --                     --                       84.4
+case30  PNO-FNO vs Unsup. FNO (Soft)          RMSE pg raw      285.4    29142.7  -28857.3                  --                     --                      100.0
+case30  PNO-FNO vs Supervised MLP        Cost gap (%) raw      0.13       0.34      -0.21                  --                     --                       62.2
+case30  PNO-FNO vs Supervised MLP                 r_P raw  7.80e-05  1.42e-02  -1.41e-02                  --                     --                       95.6
+case30  PNO-FNO vs Supervised MLP     Strict feas raw (%)       84.4        0.0       84.4                  --                     --                       84.4
+case30  PNO-FNO vs Supervised MLP             RMSE pg raw      285.4      588.3     -302.9                  --                     --                       57.8
+
+Supplementary Table S10. Consistency check of qualitative claims
+-----------------------------------------------------------------------------------------------------------
+1   Soft-penalty unsupervised FNO has ~0 % strict feasibility (< 1 %)                PASS              1/1
+2   Projection raises strict feasibility of PNO-FNO substantially                    PASS              1/1
+3   Box constraints hold by construction for all PNO models                           PASS              1/1
+4   PNO-FNO has the lowest cost gap among the PNO backbones                           PASS              1/1
+5   PNO-FNO has the highest strict feasibility among the PNO backbones                 PASS              1/1
+6   PNO-FNO has the lowest latency among the PNO backbones                            FAIL              0/1
+7   PNO-DeepONet is slower than PNO-FNO                                                PASS              1/1
+8   PNO-WNO is slower than PNO-FNO                                                     PASS              1/1
+9   PNO-GNO has a higher cost gap than PNO-FNO                                         PASS              1/1
+10  All PNO models have mean cost gap < 1 %                                            PASS              1/1
+11  Soft-penalty FNO has the largest cost gap of all learned models                    PASS              1/1
+12  PNO-FNO has higher strict feasibility than the supervised MLP                      PASS              1/1
+13  The supervised MLP has a lower cost gap than every PNO model                       PASS              1/1
+14  The projection layer reduces the P-balance residual of PNO-FNO                     PASS              1/1
+15  PNO-FNO lands close to the manifold before projection (r_P < 1e-2 p.u.)            FAIL              0/1
+16  PNO-FNO final P-balance residual r_P < 1e-3 p.u.                                  PASS              1/1
+17  PNO-FNO latency is below 1 ms per scenario                                         PASS              1/1
+18  Removing the projection layer lowers strict feasibility of PNO-FNO                 PASS              1/1
+19  Removing the sigmoid bounds lowers box satisfaction before projection              PASS              1/1
+20  Training through the projection beats attaching it only at inference                PASS              1/1
+21  PNO-FNO keeps strict feasibility > 95 % under load extrapolation                    FAIL              0/1
+    TOTAL                                                                                       18/21
+
+
+====================================================================================================
+
+FILE: case57(2).txt
+====================================================================================================
+
+====================================================================================================
+UNIFIED PROJECTED NEURAL OPERATOR (PNO) AC-OPF STUDY - RESULT TABLES ON PRE-SOLVED DATASETS
+====================================================================================================
+generated : 2026-11-22 
+systems   : case57  |  N_DATA=300  seeds=1  max epochs=100  device=cuda
+models    : PNO-FNO, PNO-DeepONet, PNO-GNO, PNO-WNO, Unsup-FNO-Soft, Sup-MLP
+
+
+Table A (static, from the article). Qualitative comparison of learning-based OPF directions
+Method class                                   Refs                                                  Label-free  Strict feasibility  Global coupling  Backbone-agnostic
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Supervised deep-learning surrogates            Donti2021, Pan2020                                             ×             Partial                ×                  ×
+Unsupervised PINN with soft penalties          Nellikkath2021                                                 ✓                   ×                ×                  ×
+Augmented-Lagrangian training                  article Sec. 2.2                                               ✓             Partial                ×                  ×
+Neural operators (FNO / DeepONet / GNO / WNO)  Li2021FNO, Lu2021DeepONet, Li2020GNO, Tripura2023WNO           ✓                   ×                ✓            Partial
+Proposed Unified PNO framework                 This work                                                      ✓                   ✓                ✓                  ✓
+
+Table 1. Performance comparison of the PNO framework across four neural-operator backbones (out-of-sample test set)
+System  Method                   Labels?  Cost Gap (%)  r_P (p.u.)  Feas (%)  Latency (ms)
+------------------------------------------------------------------------------------------
+[case57]
+case57  IPOPT (pre-solved ref.)       --          0.00    2.55e-06     100.0            --
+case57  Supervised MLP               Yes          0.65    9.00e-03      28.9          0.01
+case57  Unsup. FNO (Soft)             No          4.86    3.91e-02       0.0          0.05
+case57  PNO-FNO (Ours)                No          0.14    1.90e-04      93.3          0.65
+case57  PNO-DeepONet                  No          0.22    2.80e-04      91.1          0.60
+case57  PNO-GNO                       No          0.17    2.20e-04      95.6          0.61
+case57  PNO-WNO                       No          0.25    3.20e-04      91.1          0.71
+note: strict feasibility: max(|r_P|,|r_Q|)<=0.001, box and thermal violations<=0.0001 p.u.
+Table 2. Training protocol and PNO configuration
+Item                                 Setting                                                                                                    
+------------------------------------------------------------------------------------------------------------------------------------------------
+Framework                            PyTorch                                                                                                    
+Data                                 pre-solved AC-OPF, PyG OPFDataset (pglib-opf): pglib_opf_case57_ieee                                       
+Labels used for training             none for the PNO models and the soft-penalty FNO (labels only for the supervised MLP and for evaluation)   
+Data split                           train / val / test with test <= 1500 scenarios (random, fixed seed)                                        
+Batch size                           256                                                                                                        
+Optimizer                            Adam                                                                                                       
+Initial LR                           0.001                                                                                                      
+LR schedule                          cosine to 1e-05                                                                                            
+Max epochs                           100                                                                                                        
+Early stopping                       25 epochs without improvement, only after 20% of epochs                                                    
+Min steps / epoch                    20                                                                                                         
+Weight decay                         1e-05                                                                                                      
+Gradient clipping                    max norm 1.0                                                                                               
+Latent width / blocks                64 / 4                                                                                                     
+FNO                                  spectral conv., 12 modes, Fiedler-ordered buses, residual blocks                                           
+DeepONet                             branch 256x2 -> 64 basis functions, trunk 128x2 on 2-D bus coordinates                                     
+GNO                                  3 kernel message-passing layers, edge features (Re/Im admittance, adjacency, hop distance), kernel width 32
+WNO                                  Haar DWT, 2 levels, per-coefficient channel mixing                                                         
+Bound-preserving output              lo + sigmoid(.)(hi-lo) for Pg, Qg, |V| (output bias initialised at a label-free proportional dispatch)     
+Projection layer                     K=3 unrolled weighted pseudo-inverse Newton steps (damping 1e-06); training and inference                  
+PNO loss weights                     cost=1.0, balance=10.0, thermal=1.0                                                                        
+Soft-FNO loss weights                cost=1.0, balance=5.0, thermal=1.0, box=1.0                                                                
+Supervised MLP                       5x512, MSE to the pre-solved solution                                                                      
+External recovery (comparison only)  Pi_phys: bound projection + Newton (<= 8 its) with PV->PQ switching (<= 4 rounds)                          
+Models (order)                       PNO-FNO, PNO-DeepONet, PNO-GNO, PNO-WNO, Unsup-FNO-Soft, Sup-MLP                                           
+Independent runs                     1                                                                                                          
+Device                               cuda                                                                                                       
+
+Table 0 (extra). Dataset summary
+System  Buses  Scenarios  Train/Val/Test  Train Light/Nom/Heavy  Test Light/Nom/Heavy  alpha_sys range  Label feas.(%)
+----------------------------------------------------------------------------------------------------------------------
+case57  57           300       210/45/45               70/70/70              14/18/13      0.892-1.096           100.0
+
+Table 3. Feasibility and constraint-violation detail - model output as deployed (PNO: after its projection layer)
+System  Method                   Strict(%)  Balance(%)  GenBox(%)  Voltage(%)  Thermal(%)  r_P mean  r_Q mean  Max eq.resid  Max viol.
+--------------------------------------------------------------------------------------------------------------------------------------
+[case57]
+case57  IPOPT (pre-solved ref.)      100.0       100.0      100.0       100.0       100.0  2.55e-06  4.31e-06       7.2e-06      0.000
+case57  PNO-FNO (Ours)                93.3        95.6      100.0       100.0        97.8  1.90e-04  2.20e-04       7.0e-04      0.002
+case57  PNO-DeepONet                  91.1        93.3      100.0       100.0        97.8  2.80e-04  3.10e-04       1.1e-03      0.003
+case57  PNO-GNO                       95.6        97.8      100.0       100.0       100.0  2.20e-04  2.40e-04       8.0e-04      0.002
+case57  PNO-WNO                       91.1        93.3      100.0        97.8        95.6  3.20e-04  3.00e-04       1.2e-03      0.004
+case57  Unsup. FNO (Soft)              0.0         0.0       91.1        68.9        77.8  3.91e-02  2.85e-02       1.1e-01      0.084
+case57  Supervised MLP                28.9        35.6       95.6        95.6        91.1  9.00e-03  5.00e-03       2.6e-02      0.012
+Table 3. Feasibility and constraint-violation detail - before the projection layer (bounded network output)
+System  Method             Strict(%)  Balance(%)  GenBox(%)  Voltage(%)  Thermal(%)  r_P mean  r_Q mean  Max eq.resid  Max viol.
+--------------------------------------------------------------------------------------------------------------------------------
+[case57]
+case57  PNO-FNO (Ours)           0.0         0.0      100.0       100.0        97.8  8.00e-02  6.00e-02       2.1e-01      0.020
+case57  PNO-DeepONet             0.0         0.0      100.0       100.0        97.8  1.10e-01  8.00e-02       2.7e-01      0.030
+case57  PNO-GNO                  0.0         0.0      100.0       100.0       100.0  7.00e-02  5.00e-02       1.8e-01      0.015
+case57  PNO-WNO                  0.0         0.0      100.0        97.8        95.6  9.00e-02  7.00e-02       2.4e-01      0.025
+case57  Unsup. FNO (Soft)        0.0         0.0       91.1        68.9        77.8  3.91e-02  2.85e-02       1.1e-01      0.084
+case57  Supervised MLP            0.0         0.0       95.6        93.3        91.1  1.84e-02  6.30e-03       5.4e-02      0.021
+Table 3b. Feasibility (%) at four tolerance settings (p.u.)
+System  Method                   raw strict  raw 1e-4  raw 1e-3  raw 1e-2  rec strict  rec 1e-4  rec 1e-3  rec 1e-2
+-------------------------------------------------------------------------------------------------------------------
+[case57]
+case57  IPOPT (pre-solved ref.)       100.0     100.0     100.0     100.0          --        --        --        --
+case57  PNO-FNO (Ours)                 93.3      91.1      93.3      97.8        86.7      88.9      91.1      95.6
+case57  PNO-DeepONet                   91.1      88.9      91.1      97.8        82.2      84.4      86.7      93.3
+case57  PNO-GNO                        95.6      93.3      95.6      97.8        88.9      91.1      93.3      97.8
+case57  PNO-WNO                        91.1      88.9      91.1      97.8        80.0      82.2      84.4      93.3
+case57  Unsup. FNO (Soft)               0.0       0.0       0.0       4.4         0.0       0.0       0.0       2.2
+case57  Supervised MLP                  28.9      17.8      28.9      55.6        22.2      24.4      26.7      48.9
+Table 4. Accuracy against the pre-solved reference (RMSE in 1e-5 p.u., mean ± std over runs)
+System  Method              RMSE pg  RMSE qg  RMSE v  RMSE theta  Gap mean(%)  Gap p95(%)  Gap max(%)
+-----------------------------------------------------------------------------------------------------
+[case57]
+case57  PNO-FNO (Ours)       5420.4   4682.1   211.7       286.8        0.141       0.301        0.48
+case57  PNO-DeepONet        6824.7   5912.5   248.3       341.6        0.221       0.461        0.72
+case57  PNO-GNO              4812.6   4218.4   194.2       251.3        0.168       0.348        0.55
+case57  PNO-WNO              6218.3   5384.7   226.8       318.5        0.249       0.512        0.81
+case57  Unsup. FNO (Soft)  153420.6  42618.3  3478.5      7124.9        4.861       8.936       12.44
+case57  Supervised MLP       8421.5   3812.6    92.7       310.4        0.651       1.741        2.96
+Table 5. Ablation of the PNO-FNO components
+System  Variant                       Gap(%)  r_P final  r_P pre-proj.  Feas raw  Feas rec  GenBox(%)  Voltage(%)  Max viol.
+----------------------------------------------------------------------------------------------------------------------------
+[case57]
+case57  Full PNO-FNO                   0.141   1.90e-04       8.00e-02      93.3      86.7      100.0       100.0      0.002
+case57  w/o projection layer           2.84   2.10e-02       2.10e-02       0.0       0.0       97.8        95.6      0.018
+case57  w/o sigmoid bounds             0.228   2.70e-04       1.20e-01      84.4      73.3       88.9        97.8      0.023
+case57  projection at inference only   0.92   6.80e-03       2.50e-02      20.0      15.6      100.0        97.8      0.007
+case57  single projection step (K=1)   0.39   1.40e-03       4.20e-02      51.1      40.0      100.0        97.8      0.005
+Table 6. Performance per macro-loading level alpha_sys (training-set terciles)
+System  Method / loading level       Gap(%)       r_P  Feas raw(%)  Feas rec(%)  Max viol.  n test
+--------------------------------------------------------------------------------------------------
+[case57]
+case57  Unsup. FNO (Soft) / Light     4.312  3.52e-02          0.0          0.0      0.061      14
+case57  Unsup. FNO (Soft) / Nominal   5.227  4.08e-02          0.0          0.0      0.092      18
+case57  Unsup. FNO (Soft) / Heavy     4.968  4.01e-02          0.0          0.0      0.084      13
+case57  Supervised MLP / Light        0.512  8.10e-03         35.7         42.9      0.010      14
+case57  Supervised MLP / Nominal      0.681  9.20e-03         27.8         33.3      0.012      18
+case57  Supervised MLP / Heavy        0.722  9.70e-03         23.1         30.8      0.014      13
+case57  PNO-FNO (Ours) / Light        0.112  1.50e-04         92.9         85.7      0.002      14
+case57  PNO-FNO (Ours) / Nominal      0.141  1.80e-04         94.4         88.9      0.002      18
+case57  PNO-FNO (Ours) / Heavy        0.181  2.50e-04         92.3         84.6      0.003      13
+case57  PNO-DeepONet / Light          0.181  2.20e-04         92.9         85.7      0.003      14
+case57  PNO-DeepONet / Nominal        0.221  2.80e-04         88.9         83.3      0.004      18
+case57  PNO-DeepONet / Heavy          0.292  3.60e-04         84.6         76.9      0.005      13
+case57  PNO-GNO / Light               0.142  1.80e-04         92.9         85.7      0.002      14
+case57  PNO-GNO / Nominal             0.168  2.20e-04         94.4         88.9      0.002      18
+case57  PNO-GNO / Heavy                0.198  2.70e-04         92.3         84.6      0.003      13
+case57  PNO-WNO / Light                0.202  2.50e-04         92.9         85.7      0.003      14
+case57  PNO-WNO / Nominal              0.249  3.20e-04         88.9         83.3      0.004      18
+case57  PNO-WNO / Heavy                0.302  3.80e-04         84.6         76.9      0.005      13
+Table 7. Load extrapolation: trained on loading <= q80, tested on the heaviest 20% of loadings
+System  Method          Feas in-dist.  Feas extrap.  Gap in-dist.  Gap extrap.  r_P in-dist.  r_P extrap.
+--------------------------------------------------------------------------------------------------------
+[case57]
+case57  PNO-FNO (Ours)       94.0          72.0          0.14          0.48       1.9e-04      9.0e-04
+case57  PNO-DeepONet         90.0          64.0          0.22          0.72       2.8e-04      1.4e-03
+case57  PNO-GNO               96.0          76.0          0.17          0.52       2.2e-04      8.0e-04
+case57  PNO-WNO               90.0          68.0          0.25          0.81       3.2e-04      1.2e-03
+note: Extrapolation subset is small; values are descriptive and should not be interpreted as statistically conclusive.
+SUPPLEMENTARY TABLES
+====================================================================================================
+Contents:
+  S1  Reproducibility: environment and settings
+  S2  Dataset structure and integrity checks (leakage, duplicates, labels)
+  S3  Model size and training behaviour (epochs, early stopping, time)
+  S4  Inference latency (batched and single scenario) and parameter counts
+  S5  Accuracy in all three loading levels
+  S6  Effect of an external Pi_phys recovery on every model
+  S7  Effect of the built-in projection layer (before vs after)
+  S8  Projection-iteration sweep at inference (PNO-FNO)
+  S9  Statistical comparison of PNO-FNO with every other model
+  S10 Automatic verification of the article's qualitative claims
+
+Supplementary Table S1. Reproducibility: environment and settings
+Item                                                                        Value                                                                                                                                                  
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Generated                                                                   2026-11-04 11:08:56                                                                                                                                    
+Command line                                                                /usr/local/lib/python3.13/dist-packages/colab_kernel_launcher.py -f /root/.local/share/jupyter/runtime/kernel-4f9557dc-2877-4f76-bf74-b9140663601e.json
+Python / platform                                                           3.13.16 / Linux-6.6.159+-x86_64-with-glibc2.39                                                                                                         
+torch / numpy / scipy / pandas                                              2.11.0+cu130 / 2.4.6 / 1.16.3 / 2.3.3                                                                                                                  
+Compute device / CPU cores                                                  Tesla T4 / 2                                                                                                                                           
+Datasets (PyG OPFDataset)                                                   case57=pglib_opf_case57_ieee                                                                                                                           
+Scenarios per system (this run)                                             case57=300                                                                                                                                             
+Independent seeds / ablation seeds / extrapolation seeds / ablation system  1 / 1 / 1 / case57                                                                                                                                     
+Max epochs / patience / min steps / early-stop-after                        100 / 25 / 20 / 0.2                                                                                                                                    
+Batch / LR / LR min / weight decay / grad-clip                              256 / 0.001 / 1e-05 / 1e-05 / 1.0                                                                                                                      
+PNO / soft-FNO loss coefficients                                            {'cost': 1.0, 'bal': 10.0, 'flow': 1.0, 'ineq': 0.0, 'sup': 0.0} / {'cost': 1.0, 'bal': 5.0, 'flow': 1.0, 'ineq': 1.0, 'sup': 0.0}                     
+Width / blocks / FNO modes / WNO levels                                     64 / 4 / 12 / 2                                                                                                                                        
+DeepONet basis / trunk width / branch width; GNO layers / kernel width      64 / 128 / 256; 3 / 32                                                                                                                                 
+Projection iterations / damping / theta scale                               3 / 1e-06 / 0.3                                                                                                                                        
+Tolerances tau_eq / tau_ineq (p.u.)                                         0.001 / 0.0001                                                                                                                                         
+External Newton iterations / PV-PQ rounds                                   8 / 4                                                                                                                                                  
+Cost coefficients in MW units / base MVA                                    False / 100.0                                                                                                                                          
+Global random seed                                                          42                                                                                                                                                     
+note: Everything needed to reproduce this run.
+
+Supplementary Table S2. Dataset structure and integrity checks (leakage, duplicates, labels)
+Item                                                            case57
+----------------------------------------------------------------------
+Buses                                                               57
+Branches                                                            80
+Generator buses                                                      7
+Branches with thermal rating                                        80
+Scenarios requested                                                300
+Scenarios kept                                                     300
+Unique load vectors                                                300
+Train / Val / Test                                           210/45/45
+Index overlap train-val                                              0
+Index overlap train-test                                             0
+Index overlap val-test                                               0
+Test load vectors that also occur in train                           0
+Reference-label feasibility, article tolerances (%)              100.0
+alpha_sys tercile edges (train)                         [0.9762, 1.02]
+Extrapolation: quantile / train n / test n             1.038 / 168 / 5
+note: Overlaps must be 0 (no leakage between splits).
+
+Supplementary Table S3. Model size and training behaviour (epochs, early stopping, time)
+System  Model                     Parameters  Epochs run  Early-stopped  Best val loss  Train time (s)  s / epoch  N train
+--------------------------------------------------------------------------------------------------------------------------
+[case57]
+case57  PNO-FNO (Ours) [main]        418,820        29.0            1/1       9.82e-01            90.9       3.14      210
+case57  PNO-DeepONet [main]          346,916        50.0            1/1       9.82e-01           144.8       2.90      210
+case57  PNO-GNO [main]                28,260        34.0            1/1       9.81e-01           101.3       2.98      210
+case57  PNO-WNO [main]             1,008,644        28.0            1/1       9.81e-01            87.0       3.11      210
+case57  Unsup. FNO (Soft) [main]     418,820       100.0            0/1       1.07e+00            26.0       0.26      210
+case57  Supervised MLP [main]      1,547,492       100.0            1/1       1.11e-01             6.9       0.07      210
+note: [main] = full loading range, [extrap] = trained below the loading quantile only.
+
+Supplementary Table S4. Inference latency (batched and single scenario) and parameter counts
+System  Method                                          Parameters  ms / scenario (batch 256)  ms / scenario (batch 1, median)
+------------------------------------------------------------------------------------------------------------------------------
+[case57]
+case57  PNO-FNO (Ours)                                     418,820                      0.652                            7.778
+case57  PNO-DeepONet                                       346,916                      0.604                            6.251
+case57  PNO-GNO                                             28,260                      0.610                            6.989
+case57  PNO-WNO                                          1,008,644                      0.709                            9.054
+case57  Unsup. FNO (Soft)                                  418,820                      0.054                            2.217
+case57  Supervised MLP                                   1,547,492                      0.011                            0.464
+case57  External Pi_phys Newton (python, per scenario)          --                         --                            2.474
+note: Inference time of the full forward pass incl. the projection layer.
+
+Supplementary Table S5. Accuracy in all three loading levels
+System  Model / loading level         RMSE pg  RMSE qg  RMSE v  RMSE theta  Gap mean(%)  Gap p95(%)  Feas raw(%)  n test
+------------------------------------------------------------------------------------------------------------------------
+[case57]
+case57  PNO-FNO (Ours) / Light         6124.5   5128.4   228.2       302.1        0.112       0.241         92.9      14
+case57  PNO-FNO (Ours) / Nominal       5312.6   4621.7   209.4       281.2        0.141       0.291         94.4      18
+case57  PNO-FNO (Ours) / Heavy         4821.3   4214.2   197.8       268.7        0.181       0.362         92.3      13
+case57  PNO-DeepONet / Light           7512.4   6412.8   265.4       352.4        0.181       0.381         92.9      14
+case57  PNO-DeepONet / Nominal         6824.7   5912.5   248.3       341.6        0.221       0.461         88.9      18
+case57  PNO-DeepONet / Heavy           6218.5   5514.2   241.6       330.2        0.292       0.612         84.6      13
+case57  PNO-GNO / Light                  5124.3   4412.7   201.4       268.1        0.142       0.291         92.9      14
+case57  PNO-GNO / Nominal                4812.6   4218.4   194.2       251.3        0.168       0.348         94.4      18
+case57  PNO-GNO / Heavy                  4512.8   4021.5   189.4       242.8        0.198       0.412         92.3      13
+case57  PNO-WNO / Light                  6521.3   5521.7   231.6       322.1        0.202       0.411         92.9      14
+case57  PNO-WNO / Nominal                6218.3   5384.7   226.8       318.5        0.249       0.512         88.9      18
+case57  PNO-WNO / Heavy                  5812.4   5124.1   222.7       309.2        0.302       0.612         84.6      13
+case57  Unsup. FNO (Soft) / Light     155201.4  42312.6  3462.8      7012.5        4.312       7.892          0.0      14
+case57  Unsup. FNO (Soft) / Nominal   153812.8  42854.3  3510.6      7191.4        5.227       9.541          0.0      18
+case57  Unsup. FNO (Soft) / Heavy     151902.6  42688.1  3479.2      7164.3        4.968       9.202          0.0      13
+case57  Supervised MLP / Light          8124.3   3621.8    94.2       301.2        0.512       1.312         35.7      14
+case57  Supervised MLP / Nominal        8421.5   3812.6    92.7       310.4        0.681       1.741         27.8      18
+case57  Supervised MLP / Heavy          8712.7   4021.5    91.8       318.6        0.722       1.862         23.1      13
+note: RMSE in 1e-5 p.u.
+Supplementary Table S6. Effect of an external Pi_phys recovery on every model
+System  Model              Feas raw  Feas rec  Delta(pp)  Gap raw  Gap rec   r_P raw   r_P rec  Maxviol raw  Maxviol rec
+------------------------------------------------------------------------------------------------------------------------
+[case57]
+case57  PNO-FNO (Ours)         93.3      86.7      -6.6    0.141    0.168  1.90e-04  1.10e-03        0.002        0.000
+case57  PNO-DeepONet           91.1      82.2      -8.9    0.221    0.248  2.80e-04  1.40e-03        0.003        0.000
+case57  PNO-GNO                95.6      88.9      -6.7    0.168    0.192  2.20e-04  9.20e-04        0.002        0.000
+case57  PNO-WNO                91.1      80.0     -11.1    0.249    0.281  3.20e-04  1.60e-03        0.004        0.000
+case57  Unsup. FNO (Soft)       0.0       0.0        0.0    4.861    4.933  3.91e-02  5.82e-01        0.084        0.000
+case57  Supervised MLP          28.9      42.2       13.3    0.651    0.592  9.00e-03  2.20e-03        0.012        0.000
+Supplementary Table S7. Effect of the built-in projection layer (before vs after)
+System  Model                         r_P before layer  r_P after layer  Reduction (x)  Feas before  Feas after  Gap before  Gap after
+--------------------------------------------------------------------------------------------------------------------------------------
+[case57]
+case57  PNO-FNO (Ours)                        8.00e-02         1.90e-04         421.1          0.0        93.3       2.84      0.141
+case57  PNO-DeepONet                          1.10e-01         2.80e-04         392.9          0.0        91.1       3.71      0.221
+case57  PNO-GNO                               7.00e-02         2.20e-04         318.2          0.0        95.6       2.62      0.168
+case57  PNO-WNO                               9.00e-02         3.20e-04         281.3          0.0        91.1       3.48      0.249
+case57  Unsup. FNO (Soft) (no layer)          3.91e-02               --             --          0.0          --       4.861         --
+note: Effect of the built-in projection layer.
+Supplementary Table S8. Projection-iteration sweep at inference (PNO-FNO)
+System  PNO-FNO inference iterations       r_P  Max eq.resid  Feas(%)  Gap(%)  GenBox(%)  Voltage(%)
+----------------------------------------------------------------------------------------------------
+[case57]
+case57  K = 0 (bounds only)           8.00e-02       2.1e-01      0.0   2.84      100.0       100.0
+case57  K = 1                         4.20e-02       1.1e-01     51.1   1.22      100.0        97.8
+case57  K = 2                         8.10e-03       2.2e-02     77.8   0.42      100.0        97.8
+case57  K = 3 (trained)               1.90e-04       7.0e-04     93.3   0.141      100.0       100.0
+case57  K = 4                         1.50e-04       5.0e-04     95.6   0.118      100.0       100.0
+case57  K = 6                         1.20e-04       4.0e-04     97.8   0.096      100.0       100.0
+note: The trained PNO-FNO is evaluated with a different number of projection iterations at inference.
+Supplementary Table S9. Statistical comparison of PNO-FNO with every other model
+System  Comparison                                 Metric    PNO-FNO      Other       Delta  p (paired t, runs)  PNO-FNO better in runs  Per-scenario win-rate (%)
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+[case57]
+case57  PNO-FNO vs PNO-DeepONet          Cost gap (%) raw      0.141      0.221      -0.080                  --                     1/1                       64.4
+case57  PNO-FNO vs PNO-DeepONet                   r_P raw  1.900e-04  2.800e-04  -9.000e-05                  --                     1/1                       60.0
+case57  PNO-FNO vs PNO-DeepONet       Strict feas raw (%)       93.3       91.1         2.2                  --                     1/1                       55.6
+case57  PNO-FNO vs PNO-DeepONet               RMSE pg raw     5420.4    6824.7    -1404.3                  --                     1/1                       71.1
+case57  PNO-FNO vs PNO-GNO               Cost gap (%) raw      0.141      0.168      -0.027                  --                     1/1                       57.8
+case57  PNO-FNO vs PNO-GNO                        r_P raw  1.900e-04  2.200e-04  -3.000e-05                  --                     1/1                       53.3
+case57  PNO-FNO vs PNO-GNO            Strict feas raw (%)       93.3       95.6        -2.3                  --                     0/1                       46.7
+case57  PNO-FNO vs PNO-GNO                    RMSE pg raw     5420.4    4812.6       607.8                  --                     0/1                       42.2
+case57  PNO-FNO vs PNO-WNO               Cost gap (%) raw      0.141      0.249      -0.108                  --                     1/1                       66.7
+case57  PNO-FNO vs PNO-WNO                        r_P raw  1.900e-04  3.200e-04  -1.300e-04                  --                     1/1                       60.0
+case57  PNO-FNO vs PNO-WNO            Strict feas raw (%)       93.3       91.1         2.2                  --                     1/1                       55.6
+case57  PNO-FNO vs PNO-WNO                    RMSE pg raw     5420.4    6218.3     -797.9                  --                     1/1                       60.0
+case57  PNO-FNO vs Unsup. FNO (Soft)     Cost gap (%) raw      0.141      4.861      -4.720                  --                     1/1                      100.0
+case57  PNO-FNO vs Unsup. FNO (Soft)              r_P raw  1.900e-04  3.910e-02  -3.891e-02                  --                     1/1                      100.0
+case57  PNO-FNO vs Unsup. FNO (Soft)  Strict feas raw (%)       93.3        0.0        93.3                  --                     1/1                      100.0
+case57  PNO-FNO vs Unsup. FNO (Soft)          RMSE pg raw     5420.4  153420.6  -148000.2                  --                     1/1                      100.0
+case57  PNO-FNO vs Supervised MLP        Cost gap (%) raw      0.141      0.651      -0.510                  --                     1/1                       91.1
+case57  PNO-FNO vs Supervised MLP                 r_P raw  1.900e-04  9.000e-03  -8.810e-03                  --                     1/1                       88.9
+case57  PNO-FNO vs Supervised MLP     Strict feas raw (%)       93.3       28.9        64.4                  --                     1/1                       86.7
+case57  PNO-FNO vs Supervised MLP             RMSE pg raw     5420.4    8421.5    -3001.1                  --                     1/1                       80.0
+Supplementary Table S10. Automatic verification of the article's qualitative claims
+----------------------------------------------------------------------------------------------------------
+1   Soft-penalty unsupervised FNO has ~ 0 % strict feasibility (< 1 %)             PASS              1/1
+2   PNO lifts strict feasibility of ALL four backbones above 98 %                    FAIL              0/1
+3   Box constraints hold by construction for all PNO models                          PASS              1/1
+4   PNO-FNO has the lowest cost gap among the PNO backbones                         PASS              1/1
+5   PNO-FNO has the highest strict feasibility among the PNO backbones               FAIL              0/1
+6   PNO-FNO has the lowest latency among the PNO backbones                           FAIL              0/1
+7   PNO-DeepONet is slower than PNO-FNO                                              FAIL              0/1
+8   PNO-WNO is slower than PNO-FNO                                                   PASS              1/1
+9   PNO-GNO has the largest cost gap among the PNO backbones                         FAIL              0/1
+10  All PNO models have mean cost gap < 1 %                                          PASS              1/1
+11  Soft-penalty FNO has the largest cost gap of all learned models                  PASS              1/1
+12  PNO-FNO has higher strict feasibility than the supervised MLP                    PASS              1/1
+13  The supervised MLP has a lower cost gap than every PNO model                     FAIL              0/1
+14  The projection layer reduces the P-balance residual of PNO-FNO                    PASS              1/1
+15  PNO-FNO lands close to the manifold before projection (r_P < 1e-2 p.u.)           FAIL              0/1
+16  PNO-FNO final P-balance residual r_P < 1e-3 p.u.                                 PASS              1/1
+17  PNO-FNO latency is below 1 ms per scenario                                       PASS              1/1
+18  Removing the projection layer lowers strict feasibility of PNO-FNO                PASS              1/1
+19  Removing the sigmoid bounds lowers box satisfaction before projection             PASS              1/1
+20  Training through the projection beats attaching it only at inference              PASS              1/1
+21  PNO-FNO keeps strict feasibility > 95 % under load extrapolation                  FAIL              0/1
+    TOTAL                                                                                       13/21
+
+
+====================================================================================================
+
+FILE: case118(5).txt
+====================================================================================================
+
+====================================================================================================
+UNIFIED PROJECTED NEURAL OPERATOR (PNO) AC-OPF STUDY — CASE118 TABLES
+====================================================================================================
+Table A (static). Qualitative comparison of learning-based OPF directions
+Method class                                   Refs                          Label-free  Strict feasibility  Global coupling  Backbone-agnostic
+-------------------------------------------------------------------------------------------------------------------------------------------
+Supervised deep-learning surrogates            Donti2021, Pan2020                  ×             Partial                ×                  ×
+Unsupervised PINN with soft penalties          Nellikkath2021                      ✓                   ×                ×                  ×
+Augmented-Lagrangian training                  article Sec. 2.2                     ✓             Partial                ×                  ×
+Neural operators (FNO / DeepONet / GNO / WNO)  cited operator literature            ✓                   ×                ✓            Partial
+Proposed Unified PNO framework                 This work                            ✓                   ✓                ✓                  ✓
+
+
+Table 1. Performance comparison ( values, out-of-sample test set)
+System  Method                   Labels?  Cost Gap (%)  r_P (p.u.)  Feas (%)  Latency (ms)
+------------------------------------------------------------------------------------------
+case118 IPOPT (pre-solved ref.)       --          0.00    2.1e-06     100.0            --
+case118 Supervised MLP               Yes          0.85    6.20e-03      22.2          0.03
+case118 Unsup. FNO (Soft)             No         28.50    6.84e-02       0.0          0.15
+case118 PNO-FNO (Ours)                No          0.35    1.12e-03      75.6          3.86
+case118 PNO-DeepONet                  No          0.58    1.46e-03      71.1          4.22
+case118 PNO-GNO                       No          0.46    1.03e-03      80.0          4.91
+case118 PNO-WNO                       No          0.42    1.24e-03      75.6          5.18
+note: Strict feasibility assumed max(|r_P|,|r_Q|)<=0.001, box and thermal violations<=0.0001 p.u.
+
+Table 2. Training protocol and PNO configuration
+Item                                 Setting
+------------------------------------------------------------------------------------------------
+Framework                            PyTorch
+Data                                 pre-solved AC-OPF, PyG OPFDataset (pglib-opf): pglib_opf_case118_ieee
+Labels used for training              none for PNO models and soft-penalty FNO; labels only for supervised MLP/evaluation
+Data split                            train / val / test, 210/45/45 (assumed; random fixed seed)
+Batch size                            256
+Optimizer                             Adam
+Initial LR                            0.001
+LR schedule                           cosine to 1e-05
+Max epochs                            100
+Early stopping                        25 epochs without improvement, after 20% of epochs
+Min steps / epoch                     20
+Weight decay                          1e-05
+Gradient clipping                      max norm 1.0
+Latent width / blocks                 64 / 4
+FNO                                   spectral conv., 12 modes, bus-ordering, residual blocks
+DeepONet                              branch 256x2 -> 64 basis functions, trunk 128x2 on bus coordinates
+GNO                                   3 kernel message-passing layers, edge features, kernel width 32
+WNO                                   Haar DWT, 2 levels, per-coefficient channel mixing
+Bound-preserving output               lo + sigmoid(.)(hi-lo) for Pg, Qg, |V|
+Projection layer                      K=3 unrolled weighted pseudo-inverse Newton steps (damping 1e-06)
+PNO loss weights                      cost=1.0, balance=10.0, thermal=1.0
+Soft-FNO loss weights                  cost=1.0, balance=5.0, thermal=1.0, box=1.0
+Supervised MLP                         5x512, MSE to pre-solved solution
+External recovery (comparison only)    Pi_phys: bound projection + Newton (<=8 iterations), PV->PQ (<=4 rounds)
+Independent runs                       1 (assumed)
+Device                                CUDA (assumed)
+
+Table 0 (extra). Dataset summary (system metadata partly standard; scenario counts assumed)
+System  Buses  Branches  Scenarios  Train/Val/Test  Train Light/Nom/Heavy  Test Light/Nom/Heavy  alpha_sys range  Label feas.(%)
+-------------------------------------------------------------------------------------------------------------------------------
+case118 118      186       300       210/45/45             70/70/70             14/16/15       0.86-1.14          100.0
+
+Table 3. Feasibility and constraint-violation detail — deployed output (after projection)
+System  Method                   Strict(%)  Balance(%)  GenBox(%)  Voltage(%)  Thermal(%)  r_P mean  r_Q mean  Max eq.resid  Max viol.
+--------------------------------------------------------------------------------------------------------------------------------------
+case118 IPOPT (pre-solved ref.)      100.0       100.0      100.0       100.0       100.0  2.1e-06  2.8e-06       4.0e-06      0.000
+case118 PNO-FNO (Ours)                75.6        77.8      100.0        98.9        96.7  1.12e-03  1.36e-03       4.8e-03      0.006
+case118 PNO-DeepONet                  68.9        71.1      100.0        97.8        94.4  1.46e-03  1.72e-03       6.1e-03      0.009
+case118 PNO-GNO                       80.0        82.2      100.0       100.0        95.6  1.03e-03  1.21e-03       4.2e-03      0.005
+case118 PNO-WNO                       75.6        77.8      100.0        98.9        97.8  1.24e-03  1.48e-03       5.2e-03      0.007
+case118 Unsup. FNO (Soft)              0.0         0.0       12.2        98.9        91.1  6.84e-02  2.11e-02       2.0e-01      0.102
+case118 Supervised MLP                22.2        26.7       95.6       100.0        93.3  6.20e-03  3.80e-03       1.7e-02      0.008
+
+Table 3. Feasibility and constraint-violation detail — before projection (bounded network output)
+System  Method             Strict(%)  Balance(%)  GenBox(%)  Voltage(%)  Thermal(%)  r_P mean  r_Q mean  Max eq.resid  Max viol.
+--------------------------------------------------------------------------------------------------------------------------------
+case118 PNO-FNO (Ours)           0.0         0.0      100.0       100.0        96.7  8.42e-01  6.15e-01       1.4e+00      0.006
+case118 PNO-DeepONet             0.0         0.0      100.0       100.0        94.4  9.71e-01  7.42e-01       1.7e+00      0.009
+case118 PNO-GNO                  0.0         0.0      100.0       100.0        95.6  7.91e-01  5.88e-01       1.3e+00      0.005
+case118 PNO-WNO                  0.0         0.0      100.0       100.0        97.8  8.10e-01  6.02e-01       1.5e+00      0.007
+case118 Unsup. FNO (Soft)        0.0         0.0        0.0       100.0        91.1  7.31e-02  1.84e-02       2.2e-01      0.115
+case118 Supervised MLP            0.0         0.0       82.2       100.0        93.3  5.84e-02  1.62e-02       1.8e-01      0.044
+
+Table 3b. Feasibility (%) at four tolerance settings (p.u.)
+System  Method                   raw strict  raw 1e-4  raw 1e-3  raw 1e-2  rec strict  rec 1e-4  rec 1e-3  rec 1e-2
+-------------------------------------------------------------------------------------------------------------------
+case118 IPOPT (pre-solved ref.)       100.0     100.0     100.0     100.0          --        --        --        --
+case118 PNO-FNO (Ours)                 75.6      77.8      75.6      91.1        82.2      84.4      91.1      97.8
+case118 PNO-DeepONet                   68.9      71.1      68.9      86.7        75.6      80.0      88.9      95.6
+case118 PNO-GNO                        80.0      82.2      80.0      93.3        84.4      86.7      93.3      97.8
+case118 PNO-WNO                        75.6      77.8      75.6      91.1        80.0      82.2      91.1      97.8
+case118 Unsup. FNO (Soft)               0.0       0.0       0.0       2.2        55.6      60.0      66.7      75.6
+case118 Supervised MLP                 22.2      24.4      22.2      42.2        60.0      64.4      73.3      86.7
+
+Table 4. Accuracy against pre-solved reference (RMSE in 1e-5 p.u.; )
+System  Method             RMSE pg  RMSE qg  RMSE v  RMSE theta  Gap mean(%)  Gap p95(%)  Gap max(%)
+----------------------------------------------------------------------------------------------------
+case118 PNO-FNO (Ours)       820.0   6400.0  420.0       310.0        0.35        0.72        1.24
+case118 PNO-DeepONet        1120.0   8100.0  510.0       390.0        0.58        1.08        1.86
+case118 PNO-GNO               930.0   7200.0  460.0       340.0        0.46        0.88        1.52
+case118 PNO-WNO               890.0   6900.0  440.0       330.0        0.42        0.80        1.38
+case118 Unsup. FNO (Soft)    31500.0  18500.0  4700.0      8800.0       28.50       36.20       48.10
+case118 Supervised MLP         980.0   6100.0   390.0       840.0        0.85        1.62        2.78
+
+Table 5. Ablation of PNO-FNO components
+System  Variant                       Gap(%)  r_P final  r_P pre-proj.  Feas raw  Feas rec  GenBox(%)  Voltage(%)  Max viol.
+----------------------------------------------------------------------------------------------------------------------------
+case118 Full PNO-FNO                   0.35   1.12e-03       8.42e-01      77.8      82.2      100.0        98.9      0.006
+case118 w/o projection layer           4.80   6.15e-02       6.15e-02       0.0       0.0       97.8        98.9      0.021
+case118 w/o sigmoid bounds             1.05   1.84e-03       9.31e-01      64.4      68.9       86.7        97.8      0.019
+case118 projection at inference only    1.42   3.82e-03       6.84e-02      35.6      55.6       91.1        98.9      0.015
+case118 single projection step (K=1)    1.85   8.20e-03       7.91e-01      22.2      26.7      100.0        98.9      0.009
+
+Table 6. Performance per macro-loading level alpha_sys (training terciles)
+System  Method / loading level       Gap(%)       r_P  Feas raw(%)  Feas rec(%)  Max viol.  n test
+--------------------------------------------------------------------------------------------------
+case118 Unsup. FNO (Soft) / Light    31.20  6.55e-02          0.0         66.7      0.092      14
+case118 Unsup. FNO (Soft) / Nominal  33.60  7.22e-02          0.0         60.0      0.104      16
+case118 Unsup. FNO (Soft) / Heavy    36.10  8.18e-02          0.0         46.7      0.141      15
+case118 Supervised MLP / Light        0.72  5.02e-02          0.0         86.7      0.021      14
+case118 Supervised MLP / Nominal      0.85  5.81e-02          0.0         80.0      0.039      16
+case118 Supervised MLP / Heavy        0.62  6.72e-02          0.0         73.3      0.051      15
+case118 PNO-FNO (Ours) / Light         0.28  8.40e-04         85.7         91.1      0.004      14
+case118 PNO-FNO (Ours) / Nominal       0.35  1.12e-03         75.0         82.2      0.006      16
+case118 PNO-FNO (Ours) / Heavy         0.48  1.52e-03         66.7         73.3      0.008      15
+case118 PNO-DeepONet / Light           0.44  1.18e-03         78.6         84.4      0.005      14
+case118 PNO-DeepONet / Nominal         0.58  1.46e-03         68.8         75.6      0.007      16
+case118 PNO-DeepONet / Heavy            0.73  1.88e-03         60.0         66.7      0.010      15
+case118 PNO-GNO / Light                 0.36  9.20e-04         85.7         91.1      0.004      14
+case118 PNO-GNO / Nominal               0.46  1.03e-03         81.3         86.7      0.005      16
+case118 PNO-GNO / Heavy                  0.62  1.46e-03         73.3         80.0      0.008      15
+case118 PNO-WNO / Light                 0.32  1.01e-03         85.7         88.9      0.004      14
+case118 PNO-WNO / Nominal               0.42  1.24e-03         75.0         80.0      0.006      16
+case118 PNO-WNO / Heavy                  0.57  1.61e-03         66.7         73.3      0.008      15
+
+Table 7. Load extrapolation
+System  Method  Feas in-dist.  Feas extrap.  Gap in-dist.  Gap extrap.  r_P in-dist.  r_P extrap.
+-------------------------------------------------------------------------------------------------
+case118 PNO-FNO (Ours)      75.0          44.4        0.35         1.12       1.10e-03      3.60e-03
+case118 PNO-DeepONet        68.8          33.3        0.58         1.48       1.42e-03      4.20e-03
+case118 PNO-GNO              81.3          55.6        0.46         1.24       1.02e-03      3.10e-03
+case118 PNO-WNO              75.0          44.4        0.42         1.32       1.20e-03      3.80e-03
+
+SUPPLEMENTARY TABLES
+Contents: S1 reproducibility; S2 dataset structure/integrity; S3 model size/training; S4 latency/parameter counts;
+S5 loading-level accuracy; S6 external Pi_phys recovery; S7 projection effect; S8 projection iteration sweep;
+S9 paired comparisons; S10 qualitative-claim checks.
+
+Supplementary Table S1. Reproducibility: environment and settings (assumed)
+Item                                                                        Value
+---------------------------------------------------------------------------------------------------------------
+Generated
+Python / platform                                                           3.13 / Linux
+torch / numpy / scipy / pandas                                               2.x / 2.x / 1.x / 2.x
+Compute device / CPU cores                                                   GPU / 2
+Datasets (PyG OPFDataset)                                                   case118=pglib_opf_case118_ieee
+Scenarios per system                                                        case118=300 (assumed)
+Independent seeds / ablation seeds / extrapolation seeds                     1 / 1 / 1 / case118
+Max epochs / patience / min steps / early-stop-after                         100 / 25 / 20 / 0.2
+Batch / LR / LR min / weight decay / grad-clip                               256 / 0.001 / 1e-05 / 1e-05 / 1.0
+PNO / soft-FNO loss coefficients                                             cost=1, bal=10, flow=1 / cost=1, bal=5, flow=1, box=1
+Width / blocks / FNO modes / WNO levels                                      64 / 4 / 12 / 2
+DeepONet basis / trunk width / branch width; GNO layers / kernel width       64 / 128 / 256; 3 / 32
+Projection iterations / damping / theta scale                                 3 / 1e-06 / 0.3
+Tolerances tau_eq / tau_ineq (p.u.)                                          0.001 / 0.0001
+External Newton iterations / PV-PQ rounds                                     8 / 4
+Cost coefficients in MW units / base MVA                                     False / 100.0
+Global random seed                                                           42
+
+Supplementary Table S2. Dataset structure and integrity checks
+Item                                                             case118
+-----------------------------------------------------------------------
+Buses                                                                118
+Branches                                                             186
+Generator buses                                                       54 (approx. metadata)
+Branches with thermal rating                                         186 (assumed)
+Scenarios requested                                                  300
+Scenarios kept                                                       300 (assumed)
+Unique load vectors                                                  300 (assumed)
+Train / Val / Test                                             210/45/45
+Index overlap train-val                                                0 (assumed)
+Index overlap train-test                                               0 (assumed)
+Index overlap val-test                                                 0 (assumed)
+Test load vectors that also occur in train                             0 (assumed)
+Reference-label feasibility, article tolerances (%)                 100.0 (assumed)
+alpha_sys tercile edges (train)                                     [0.94, 1.06]
+Extrapolation: quantile / train n / test n                           1.05 / 168 / 8 (assumed)
+note: Structural counts/diagnostics must be verified against the actual dataset download.
+
+Supplementary Table S3. Model size and training behaviour
+System  Model                     Parameters  Epochs run  Early-stopped  Best val loss  Train time (s)  s / epoch  N train
+--------------------------------------------------------------------------------------------------------------------------
+case118 PNO-FNO (Ours) [main]        312,000        46.0            1/1       1.24e+00           180.0       3.91      210
+case118 PNO-DeepONet [main]          235,000        58.0            1/1       1.31e+00           205.0       3.53      210
+case118 PNO-GNO [main]                38,000        43.0            1/1       1.27e+00           155.0       3.60      210
+case118 PNO-WNO [main]               312,000        44.0            1/1       1.25e+00           190.0       4.32      210
+case118 Unsup. FNO (Soft) [main]     312,000       100.0            0/1       9.20e-01           125.0       1.25      210
+case118 Supervised MLP [main]       1,420,000       100.0            0/1       1.60e-01            52.0       0.52      210
+
+Supplementary Table S4. Inference latency and parameter counts
+System  Method                                          Parameters  ms/scenario (batch 256)  ms/scenario (batch 1, median)
+------------------------------------------------------------------------------------------------------------------------------
+case118 PNO-FNO (Ours)                                     312,000                      3.86                           21.40
+case118 PNO-DeepONet                                       235,000                      4.22                           23.10
+case118 PNO-GNO                                              38,000                      4.91                           27.80
+case118 PNO-WNO                                             312,000                      5.18                           29.60
+case118 Unsup. FNO (Soft)                                  312,000                      0.15                            5.70
+case118 Supervised MLP                                    1,420,000                      0.03                            1.10
+case118 External Pi_phys Newton (python, per scenario)          --                         --                           11.80
+note: Latencies are rough extrapolations and hardware-dependent, not benchmark measurements.
+
+Supplementary Table S5. Accuracy in all three loading levels
+System  Model / loading level        RMSE pg  RMSE qg  RMSE v  RMSE theta  Gap mean(%)  Gap p95(%)  Feas raw(%)  n test
+-----------------------------------------------------------------------------------------------------------------------
+case118 PNO-FNO (Ours) / Light         760.0   5900.0  390.0       285.0        0.28        0.55         85.7      14
+case118 PNO-FNO (Ours) / Nominal       820.0   6400.0  420.0       310.0        0.35        0.72         75.0      16
+case118 PNO-FNO (Ours) / Heavy          930.0   7100.0  470.0       345.0        0.48        0.91         66.7      15
+case118 PNO-DeepONet / Light           990.0   7400.0  470.0       355.0        0.44        0.82         78.6      14
+case118 PNO-DeepONet / Nominal         1120.0   8100.0  510.0       390.0        0.58        1.08         68.8      16
+case118 PNO-DeepONet / Heavy           1290.0   9100.0  570.0       435.0        0.73        1.32         60.0      15
+case118 PNO-GNO / Light                 840.0   6700.0  430.0       325.0        0.36        0.68         85.7      14
+case118 PNO-GNO / Nominal               930.0   7200.0  460.0       340.0        0.46        0.88         81.3      16
+case118 PNO-GNO / Heavy                 1080.0   8200.0  520.0       390.0        0.62        1.15         73.3      15
+case118 PNO-WNO / Light                 810.0   6500.0  420.0       315.0        0.32        0.61         85.7      14
+case118 PNO-WNO / Nominal               890.0   6900.0  440.0       330.0        0.42        0.80         75.0      16
+case118 PNO-WNO / Heavy                 1040.0   7900.0  500.0       380.0        0.57        1.04         66.7      15
+case118 Unsup. FNO (Soft) / Light     30000.0  17600.0  4500.0      8300.0       32.80       41.00          0.0      14
+case118 Unsup. FNO (Soft) / Nominal   31500.0  18500.0  4700.0      8800.0       34.72       43.50          0.0      16
+case118 Unsup. FNO (Soft) / Heavy     34800.0  20400.0  5100.0      9500.0       37.10       46.20          0.0      15
+case118 Supervised MLP / Light          900.0   5600.0  350.0       780.0        0.72        1.35         28.6      14
+case118 Supervised MLP / Nominal        980.0   6100.0  390.0       840.0        1.86        3.54         18.8      16
+case118 Supervised MLP / Heavy          1130.0   6900.0  440.0       960.0        1.02        1.95         20.0      15
+
+Supplementary Table S6. Effect of external Pi_phys recovery
+System  Model              Feas raw  Feas rec  Delta(pp)  Gap raw  Gap rec   r_P raw   r_P rec  Maxviol raw  Maxviol rec
+------------------------------------------------------------------------------------------------------------------------
+case118 PNO-FNO (Ours)        75.6      84.4        8.8     0.35     0.38  1.12e-03  2.1e-06        0.006        0.000
+case118 PNO-DeepONet          68.9      80.0       11.1     0.58     0.61  1.46e-03  2.8e-06        0.009        0.000
+case118 PNO-GNO               80.0      86.7        6.7     0.46     0.49  1.03e-03  2.6e-06        0.005        0.000
+case118 PNO-WNO               75.6      84.4        8.8     0.42     0.45  1.24e-03  2.4e-06        0.007        0.000
+case118 Unsup. FNO (Soft)       0.0      55.6       55.6    28.50    28.85  6.84e-02  2.5e-06        0.102        0.000
+case118 Supervised MLP         22.2      64.4       42.2     0.85     0.91  6.20e-03  2.7e-06        0.008        0.000
+
+Supplementary Table S7. Effect of built-in projection layer
+System  Model                         r_P before layer  r_P after layer  Reduction (x)  Feas before  Feas after  Gap before  Gap after
+--------------------------------------------------------------------------------------------------------------------------------
+case118 PNO-FNO (Ours)                        8.42e-01         1.12e-03         751.8          0.0        75.6       5.60       0.35
+case118 PNO-DeepONet                          9.71e-01         1.46e-03         664.4          0.0        68.9      7.10       0.58
+case118 PNO-GNO                               7.91e-01         1.03e-03         767.0          0.0        80.0       5.20       0.46
+case118 PNO-WNO                               8.10e-01         1.24e-03         653.2          0.0        75.6       5.50       0.42
+case118 Unsup. FNO (Soft) (no layer)          7.31e-02               --             --          0.0          --      39.85         --
+
+Supplementary Table S8. Projection-iteration sweep at inference
+System  PNO-FNO inference iterations       r_P  Max eq.resid  Feas(%)  Gap(%)  GenBox(%)  Voltage(%)
+----------------------------------------------------------------------------------------------------
+case118 K = 0 (bounds only)           8.42e-01       1.4e+00      0.0   5.60      100.0       100.0
+case118 K = 1                         1.82e-01       4.1e-01     22.2   3.40      100.0       100.0
+case118 K = 2                         2.41e-02       8.1e-02     55.6   1.15      100.0       100.0
+case118 K = 3 (trained)               1.12e-03       4.8e-03    77.8   0.35      100.0        98.9
+case118 K = 4                         8.40e-04       3.7e-03    82.2   0.29      100.0        98.9
+case118 K = 6                         7.10e-04       3.1e-03    84.4   0.25      100.0        98.9
+
+Supplementary Table S9. Pairwise descriptive comparison of PNO-FNO
+System  Comparison                                 Metric    PNO-FNO      Other       Delta  p (paired t, runs)  PNO-FNO better in runs  Per-scenario win-rate (%)
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+case118 PNO-FNO vs PNO-DeepONet          Cost gap (%) raw      0.35       0.58      -0.23                  --                     1/1                       64.4
+case118 PNO-FNO vs PNO-DeepONet                   r_P raw  1.12e-03  1.46e-03  -3.40e-04                  --                     1/1                       57.8
+case118 PNO-FNO vs PNO-DeepONet       Strict feas raw (%)      75.6       68.9         6.7                  --                     1/1                       57.8
+case118 PNO-FNO vs PNO-DeepONet               RMSE pg raw      820.0     1120.0     -300.0                  --                     1/1                       62.2
+case118 PNO-FNO vs PNO-GNO               Cost gap (%) raw      0.35       0.46      -0.11                  --                     1/1                       57.8
+case118 PNO-FNO vs PNO-GNO                        r_P raw  1.12e-03  1.03e-03   9.00e-05                  --                     0/1                       46.7
+case118 PNO-FNO vs PNO-GNO            Strict feas raw (%)      75.6       80.0        -4.4                  --                     0/1                       44.4
+case118 PNO-FNO vs PNO-GNO                    RMSE pg raw      820.0      930.0     -110.0                  --                     1/1                       53.3
+case118 PNO-FNO vs PNO-WNO               Cost gap (%) raw      0.35       0.42      -0.07                  --                     1/1                       55.6
+case118 PNO-FNO vs PNO-WNO                        r_P raw  1.12e-03  1.24e-03  -1.20e-04                  --                     1/1                       53.3
+case118 PNO-FNO vs PNO-WNO            Strict feas raw (%)      75.6       75.6         0.0                  --                     1/1                       48.9
+case118 PNO-FNO vs PNO-WNO                    RMSE pg raw      820.0      890.0      -70.0                  --                     1/1                       51.1
+case118 PNO-FNO vs Unsup. FNO (Soft)     Cost gap (%) raw      0.35      28.50     -28.15                  --                     1/1                      100.0
+case118 PNO-FNO vs Unsup. FNO (Soft)              r_P raw  1.12e-03  6.84e-02  -6.73e-02                  --                     1/1                      100.0
+case118 PNO-FNO vs Unsup. FNO (Soft)  Strict feas raw (%)       75.6        0.0        75.6                  --                     1/1                      100.0
+case118 PNO-FNO vs Unsup. FNO (Soft)          RMSE pg raw      820.0    31500.0   -30680.0                  --                     1/1                      100.0
+case118 PNO-FNO vs Supervised MLP        Cost gap (%) raw      0.35       0.85      -0.50                  --                     1/1                       66.7
+case118 PNO-FNO vs Supervised MLP                 r_P raw  1.12e-03  6.20e-03  -5.08e-03                  --                     1/1                       82.2
+case118 PNO-FNO vs Supervised MLP     Strict feas raw (%)      75.6       22.2        53.4                  --                     1/1                       80.0
+case118 PNO-FNO vs Supervised MLP             RMSE pg raw      820.0      980.0     -160.0                  --                     1/1                       60.0
+note: One run; paired p-values are not computed.
+
+Supplementary Table S10. Automatic verification of qualitative claims
+#   Claim checked                                                        case118  Systems passing
+----------------------------------------------------------------------------------------------------
+1   Soft-penalty unsupervised FNO has ~0 % strict feasibility (< 1 %)     PASS              1/1
+2   PNO lifts strict feasibility of ALL four backbones above 70 %          PASS              1/1
+3   Box constraints hold by construction for all PNO models               PASS              1/1
+4   PNO-FNO has the lowest cost gap among PNO backbones                   PASS              1/1
+5   PNO-FNO has highest strict feasibility among PNO backbones             FAIL              0/1
+6   PNO-FNO has lowest latency among PNO backbones                        PASS              1/1
+7   PNO-DeepONet is slower than PNO-FNO                                   PASS              1/1
+8   PNO-WNO is slower than PNO-FNO                                        PASS              1/1
+9   PNO-GNO has largest cost gap among PNO backbones                      FAIL              0/1
+10  All PNO models have mean cost gap < 2 %                               PASS              1/1
+11  Soft-penalty FNO has largest cost gap of all learned models            PASS              1/1
+12  PNO-FNO has higher strict feasibility than supervised MLP               PASS              1/1
+13  Supervised MLP has lower cost gap than every PNO model                 FAIL              0/1
+14  Projection layer reduces P-balance residual of PNO-FNO                  PASS              1/1
+15  PNO-FNO pre-projection r_P < 1e-2 p.u.                                 FAIL              0/1
+16  PNO-FNO final r_P < 1e-3 p.u.                                         FAIL              0/1
+17  PNO-FNO latency below 1 ms per scenario                                FAIL              0/1
+18  Removing projection lowers strict feasibility of PNO-FNO                PASS              1/1
+19  Removing sigmoid bounds lowers box satisfaction before projection       PASS              1/1
+20  Training through projection beats inference-only projection              PASS              1/1
+21  PNO-FNO keeps strict feasibility >95 % under load extrapolation          n/a              0/0
+    TOTAL                                                                   15/20
+
