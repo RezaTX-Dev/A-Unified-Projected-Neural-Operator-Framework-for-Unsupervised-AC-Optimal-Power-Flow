@@ -6,15 +6,6 @@ pno_acopf_tables.py  --  ONE self-contained file
   Loads standard PYPOWER/MATPOWER test networks, creates randomized load scenarios, and solves a NEW AC-OPF for every retained scenario using PYPOWER. The resulting OPF solutions are used as training labels.
 
     pip install torch numpy scipy pandas pypower
-  Google Colab (GPU): Runtime > Change runtime type > T4 GPU, then in a cell:
-      !pip install -q pypower
-      !python pno_acopf_tables.py --n-samples 3000      # the log line must say device=cuda
-  (use >= 3000 scenarios: with 300 the train/val/test sets are tiny and the numbers are noise)
-    python pno_acopf_tables.py --list-cases           # show available cases
-    python pno_acopf_tables.py --quick                # smoke test
-    python pno_acopf_tables.py                        # uses the variables below
-    python pno_acopf_tables.py --cases case14 case30  # override CASE_SELECT from the command line
-    python pno_acopf_tables.py --mode tables          # re-print tables from cached results
 """
 import argparse, copy, csv, math, os, pickle, sys, time, zlib, warnings, platform, datetime
 from types import SimpleNamespace
