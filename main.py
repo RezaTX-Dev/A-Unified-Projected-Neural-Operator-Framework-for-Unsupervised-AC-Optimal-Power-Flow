@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 pno_acopf_tables.py  --  ONE self-contained file
   Result tables of "A Unified Projected Neural Operator Framework for Unsupervised AC Optimal Power Flow:
